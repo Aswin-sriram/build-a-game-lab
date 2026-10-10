@@ -50,6 +50,7 @@ html { color-scheme: light; } body { margin: 0; }
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+pre, code, .listing, .typebox { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
 [hidden] { display: none !important; }
 body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
 .wrap { max-width: 1400px; margin: 0 auto; padding-inline: 20px; padding-block: 20px 48px; display: flex; flex-direction: column; gap: 20px; }
@@ -116,6 +117,10 @@ input[type="text"] { font: inherit; color: var(--ink); background: var(--panel);
 .typebox textarea { position: absolute; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; resize: none; font-size: 16px; }
 .typebox .ok { color: var(--ink); }
 .typebox .err { color: var(--bad); background: var(--bad-soft); border-radius: 2px; }
+.typebox .gh { color: var(--ghost); }
+.typebox .err { cursor: pointer; }
+.jump-btn { border: 1px solid var(--bad); color: var(--bad); background: var(--panel); border-radius: 999px; padding: 1px 10px; font-size: 12px; font-weight: 700; }
+.jump-btn:hover { background: var(--bad-soft); }
 .typebox .cur { color: var(--ink); background: color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 2px; }
 .typebox:focus-within .cur { animation: blink 1s steps(1) infinite; }
 @keyframes blink { 50% { background: transparent; } }
@@ -218,7 +223,7 @@ input[type="text"] { font: inherit; color: var(--ink); background: var(--panel);
         <span><b id="prog-text"></b></span>
         <span class="stat" id="prog-stat"></span>
       </div>
-      <p class="ed-note">Click a part and type the faded code exactly. Indents are added for you after <kbd>Enter</kbd>. Mistakes turn red: press <kbd>Backspace</kbd> to fix them. Copy and paste is turned off, so you really write it.</p>
+      <p class="ed-note">Click a part and type the faded code exactly. Indents are added for you after <kbd>Enter</kbd>. Mistakes turn red. To fix one, click the red letter (or use the arrow keys) and type the right letter over it. Missed a letter? Click where it belongs and type it. Extra letter? Click after it and press <kbd>Backspace</kbd>. Copy and paste is turned off, so you really write it.</p>
       <div class="parts" id="parts"></div>
     </section>
 
@@ -372,23 +377,30 @@ function hl(src) {
 const LOCK_SVG = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
 
 /* ---------- Typing view ---------- */
-function typedHTML(target, typed) {
-  const segs = [];
-  const push = (cls, txt) => { const l = segs[segs.length - 1]; if (l && l[0] === cls) l[1] += txt; else segs.push([cls, txt]); };
-  for (let i = 0; i < typed.length; i++) {
+/* One span per character (data-i = position) so a click can put the cursor on any letter */
+function typedHTML(target, typed, caret) {
+  const n = Math.max(target.length, typed.length);
+  let html = '';
+  for (let i = 0; i < n; i++) {
     const c = typed[i], t = target[i];
-    if (c === t) push('ok', c);
-    else if (t === undefined) push('err', c === '\n' ? '↵' : c === ' ' ? '·' : c);
-    else if (t === '\n') push('err', '↵\n');
-    else push('err', t === ' ' ? '·' : t);
+    let cls, ch;
+    if (i >= typed.length) { cls = 'gh'; ch = t; }
+    else if (c === t) { cls = 'ok'; ch = c; }
+    else if (t === undefined) { cls = 'err'; ch = c === '\n' ? '↵' : c === ' ' ? '·' : c; }
+    else if (t === '\n') { cls = 'err'; ch = '↵\n'; }
+    else { cls = 'err'; ch = t === ' ' ? '·' : t; }
+    if (i === caret) {
+      cls += ' cur';
+      if (ch === '\n') ch = (i >= typed.length ? '↵' : ' ') + '\n';
+    }
+    html += '<span data-i="' + i + '" class="' + cls + '">' + esc(ch) + '</span>';
   }
-  let html = segs.map(([c, t]) => '<span class="' + c + '">' + esc(t) + '</span>').join('');
-  if (typed.length < target.length) {
-    const nx = target[typed.length];
-    html += '<span class="cur">' + (nx === '\n' ? '↵\n' : esc(nx)) + '</span>' + esc(target.slice(typed.length + 1));
-  }
+  if (caret >= n) html += '<span data-i="' + n + '" class="cur"> </span>';
   return html;
 }
+const carets = {};
+const caretOf = i => Math.min(carets[i] ?? Infinity, (gs().typed[i] || '').length);
+const firstMistake = (target, typed) => { let k = 0; while (k < typed.length && typed[k] === target[k]) k++; return k < typed.length ? k : -1; };
 
 function renderShelf() {
   $('shelf').innerHTML = GAMES.map(g => {
@@ -409,7 +421,7 @@ function renderParts() {
     const k = idx.indexOf(i) + 1;
     const done = isDone(g, s, i);
     return `<section class="tpart ${done ? 'done' : ''}" data-idx="${i}">
-      <div class="tp-head"><span class="tp-num">Part ${k} of 5</span><h3>${esc(p.title)}</h3><span class="tp-state" data-state></span></div>
+      <div class="tp-head"><span class="tp-num">Part ${k} of 5</span><h3>${esc(p.title)}</h3><button class="jump-btn" data-jump hidden>Go to mistake</button><span class="tp-state" data-state></span></div>
       <p class="tp-desc">${esc(p.desc)}</p>
       <div class="typebox">
         <pre data-pre></pre>
@@ -428,10 +440,12 @@ function paintPart(i) {
   if (!el) return;
   const target = g.parts[i].code, typed = s.typed[i] || '';
   const done = typed === target;
-  el.querySelector('[data-pre]').innerHTML = done ? hl(target) : typedHTML(target, typed);
+  el.querySelector('[data-pre]').innerHTML = done ? hl(target) : typedHTML(target, typed, caretOf(i));
   let correct = 0;
-  while (correct < typed.length && typed[correct] === target[correct]) correct++;
+  for (let k = 0; k < Math.min(typed.length, target.length); k++) if (typed[k] === target[k]) correct++;
   el.querySelector('[data-state]').textContent = done ? 'Done ✓' : Math.floor(100 * correct / target.length) + '%';
+  const jump = el.querySelector('[data-jump]');
+  if (jump) jump.hidden = done || firstMistake(target, typed) < 0;
 }
 
 function renderProgress() {
@@ -462,6 +476,7 @@ function renderListing(target, g, typedMap, finished) {
 
 function renderLab() {
   const g = game(), s = gs();
+  for (const k in carets) delete carets[k];
   $('game-title').textContent = g.name;
   $('game-blurb').textContent = g.blurb + ' ' + g.controls;
   renderShelf(); renderParts(); renderProgress();
@@ -480,28 +495,57 @@ function setStatus(html, ok) { $('status').className = 'status' + (ok ? ' ok' : 
 function onType(ta) {
   const i = +ta.dataset.idx, g = game(), s = gs();
   const target = g.parts[i].code;
-  let t = s.typed[i] || '';
+  const old = s.typed[i] || '';
   const v = ta.value.replace(/\r/g, '').replace(/\t/g, '  ');
-  if (v.length > t.length && v.startsWith(t)) {
-    for (const ch of v.slice(t.length)) {
-      if (t.length >= target.length + 5) break;
+  // Work out what changed. Prefer an edit at the cursor; otherwise compare the common start and end.
+  const oc = caretOf(i), d = v.length - old.length;
+  let p, removed = '', inserted = '';
+  if (d > 0 && v.slice(0, oc) === old.slice(0, oc) && v.slice(oc + d) === old.slice(oc)) { p = oc; inserted = v.slice(oc, oc + d); }
+  else if (d < 0 && oc + d >= 0 && v === old.slice(0, oc + d) + old.slice(oc)) { p = oc + d; removed = old.slice(p, oc); }
+  else if (d < 0 && v === old.slice(0, oc) + old.slice(oc - d)) { p = oc; removed = old.slice(oc, oc - d); }
+  else {
+    p = 0;
+    while (p < old.length && p < v.length && old[p] === v[p]) p++;
+    let q = 0;
+    while (q < old.length - p && q < v.length - p && old[old.length - 1 - q] === v[v.length - 1 - q]) q++;
+    removed = old.slice(p, old.length - q); inserted = v.slice(p, v.length - q);
+  }
+  let t = old, caret = p;
+  if (inserted && !removed) {
+    // Typing. In the middle: replace a wrong letter in place, or insert where a letter is missing.
+    for (const ch of inserted) {
+      if (t.length >= target.length + 5 && caret >= t.length) break;
       s.keys++;
-      if (ch !== target[t.length]) s.errs++;
-      t += ch;
-      if (ch === '\n' && target[t.length - 1] === '\n') while (target[t.length] === ' ') t += ' ';
+      if (ch !== target[caret]) s.errs++;
+      const atEnd = caret >= t.length;
+      const ins = t.slice(0, caret) + ch + t.slice(caret);
+      if (atEnd) t = ins;
+      else {
+        // Replace the letter under the cursor, or insert a missing one: pick whichever lines up more of what follows
+        const over = t.slice(0, caret) + ch + t.slice(caret + 1);
+        const fit = str => { let n = 0; for (let k = caret; k < caret + 16 && k < str.length; k++) if (str[k] === target[k]) n++; return n; };
+        const fo = fit(over), fi = fit(ins);
+        t = fi > fo || (fi === fo && t[caret] === target[caret]) ? ins : over;
+      }
+      caret++;
+      if (atEnd && ch === '\n' && target[caret - 1] === '\n') while (target[caret] === ' ') { t += ' '; caret++; }
     }
-  } else if (v.length < t.length && t.startsWith(v)) {
-    const wasIndent = /\n +$/.test(t);
+  } else if (removed && !inserted) {
+    // Backspace / Delete. At the end, backing into an automatic indent removes the whole indent and the line break.
+    const atEnd = p + removed.length === old.length;
     t = v;
     const m = /\n +$/.exec(t);
-    if (wasIndent && m) t = t.slice(0, m.index);
+    if (atEnd && /\n +$/.test(old) && m && /^ +$/.test(removed)) { t = t.slice(0, m.index); caret = t.length; }
   } else {
+    // Anything else (a phone keyboard replacing a word): take it as it is
     t = v.slice(0, target.length + 5);
+    caret = Math.min(p + inserted.length, t.length);
   }
   if (!s.started) s.started = Date.now();
   s.typed[i] = t;
+  carets[i] = caret;
   ta.value = t;
-  ta.selectionStart = ta.selectionEnd = t.length;
+  ta.setSelectionRange(caret, caret);
   save();
   if (t === target) partFinished(i);
   else { paintPart(i); renderProgressLight(); }
@@ -534,16 +578,36 @@ function partFinished(i) {
 $('parts').addEventListener('input', e => { if (e.target.matches('textarea')) onType(e.target); });
 $('parts').addEventListener('paste', e => { if (e.target.matches('textarea')) { e.preventDefault(); setStatus('Copy and paste is turned off. Typing it yourself is how you learn it.'); } });
 $('parts').addEventListener('drop', e => { if (e.target.matches('textarea')) e.preventDefault(); });
+function moveCaret(ta, pos) {
+  const i = +ta.dataset.idx;
+  const len = (gs().typed[i] || '').length;
+  carets[i] = Math.max(0, Math.min(len, pos));
+  ta.setSelectionRange(carets[i], carets[i]);
+  paintPart(i);
+}
 $('parts').addEventListener('keydown', e => {
   const ta = e.target;
   if (!ta.matches('textarea')) return;
-  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'].includes(e.key)) e.preventDefault();
+  const i = +ta.dataset.idx, t = gs().typed[i] || '', c = caretOf(i);
+  // The cursor moves through the code you typed (the hidden text box is too narrow to do this itself)
+  const lineStart = t.lastIndexOf('\n', c - 1) + 1, col = c - lineStart;
+  const lineEnd = k => { const e2 = t.indexOf('\n', k); return e2 < 0 ? t.length : e2; };
+  const nav = {
+    ArrowLeft: () => c - 1,
+    ArrowRight: () => c + 1,
+    Home: () => lineStart,
+    End: () => lineEnd(c),
+    ArrowUp: () => { if (!lineStart) return 0; const ps = t.lastIndexOf('\n', lineStart - 2) + 1; return Math.min(ps + col, lineStart - 1); },
+    ArrowDown: () => { const le = lineEnd(c); if (le >= t.length) return t.length; return Math.min(le + 1 + col, lineEnd(le + 1)); },
+  };
+  if (nav[e.key]) { e.preventDefault(); moveCaret(ta, nav[e.key]()); return; }
+  if (['PageUp', 'PageDown'].includes(e.key)) e.preventDefault();
   if (e.key === 'Tab' && !e.shiftKey) {
-    const target = game().parts[+ta.dataset.idx].code, t = ta.value;
-    if (target[t.length] === ' ') {
-      e.preventDefault();
+    const target = game().parts[i].code;
+    e.preventDefault();
+    if (c === t.length && target[c] === ' ') {
       let add = '';
-      while (target[t.length + add.length] === ' ') add += ' ';
+      while (target[c + add.length] === ' ') add += ' ';
       ta.value = t + add;
       onType(ta);
     }
@@ -551,10 +615,24 @@ $('parts').addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && ['a', 'z', 'y'].includes(e.key.toLowerCase())) e.preventDefault();
 });
 $('parts').addEventListener('click', e => {
+  const jump = e.target.closest('[data-jump]');
+  if (jump) {
+    const part = jump.closest('.tpart'), i = +part.dataset.idx;
+    const ta = part.querySelector('textarea');
+    const k = firstMistake(game().parts[i].code, gs().typed[i] || '');
+    if (ta && k > -1) { ta.focus({ preventScroll: true }); moveCaret(ta, k); }
+    return;
+  }
   const box = e.target.closest('.typebox');
   if (!box) return;
   const ta = box.querySelector('textarea');
-  if (ta) { ta.focus({ preventScroll: true }); ta.selectionStart = ta.selectionEnd = ta.value.length; }
+  if (!ta) return;
+  ta.focus({ preventScroll: true });
+  const ch = e.target.closest('[data-i]');
+  moveCaret(ta, ch ? +ch.dataset.i : Infinity);
+});
+$('parts').addEventListener('focusin', e => {
+  if (e.target.matches('textarea')) { const i = +e.target.dataset.idx; e.target.setSelectionRange(caretOf(i), caretOf(i)); }
 });
 
 /* ---------- Simulator ---------- */
