@@ -72,6 +72,11 @@ input[type="text"] { font: inherit; color: var(--ink); background: var(--panel);
 .field input { font-size: 18px; padding: 10px 14px; }
 .team-error { margin: 0; color: var(--bad); font-weight: 700; }
 .btn.big { font-size: 17px; padding: 12px 18px; align-self: flex-start; }
+.side-cards { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.team-card.legacy { border: 1.5px solid var(--accent); background: var(--accent-soft); }
+.legacy-list { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+.legacy-list li { font-size: 13px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; }
+.legacy-list li.built { border-color: var(--ok); color: var(--ok); font-weight: 700; }
 .saved-list { display: flex; flex-direction: column; gap: 8px; }
 .saved-list .empty { color: var(--muted); font-size: 14px; margin: 0; }
 .saved-team { display: flex; align-items: center; gap: 10px; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; }
@@ -244,9 +249,26 @@ input[type="text"] { font: inherit; color: var(--ink); background: var(--panel);
       <p class="team-error" id="team-error" hidden></p>
       <button class="btn primary big" type="submit">Start coding</button>
     </form>
-    <div class="team-card">
-      <h3>Saved teams on this computer</h3>
-      <div class="saved-list" id="saved-teams"></div>
+    <div class="side-cards">
+      <form class="team-card legacy" id="legacy-card" autocomplete="off" hidden>
+        <h3>Work from before</h3>
+        <p>Someone used this computer before names were added, and their work is still here. Type the names of the students who did it, then save it to their team.</p>
+        <ul class="legacy-list" id="legacy-list"></ul>
+        <div class="field">
+          <label for="legacy-name1">Student 1</label>
+          <input type="text" id="legacy-name1" maxlength="24" placeholder="First name">
+        </div>
+        <div class="field">
+          <label for="legacy-name2">Student 2</label>
+          <input type="text" id="legacy-name2" maxlength="24" placeholder="First name">
+        </div>
+        <p class="team-error" id="legacy-error" hidden></p>
+        <button class="btn primary" type="submit">Save this work to our team</button>
+      </form>
+      <div class="team-card">
+        <h3>Saved teams on this computer</h3>
+        <div class="saved-list" id="saved-teams"></div>
+      </div>
     </div>
   </section>
 
@@ -948,12 +970,83 @@ function renderSavedTeams() {
   }).join('');
   host.querySelectorAll('.saved-team').forEach((row, k) => { row.querySelector('b').textContent = teamName(list[k][1].names || []); });
 }
+/* ---------- Work saved before teams existed ----------
+   Earlier versions kept one person's progress per browser:
+   v3 stored just the letters typed (same as now); v2 stored the full code typed character by character. */
+const LEGACY_KEYS = ['build-a-game-lab-v3', 'build-a-game-lab-v2'];
+const IMPORTED_KEY = 'build-a-game-lab-imported-v1';
+const progressOf = (g, s) => s ? typedIdx(g).reduce((n, i) => n + ((s.typed || {})[i] || '').length, 0) : 0;
+function readLegacy() {
+  try { if (localStorage.getItem(IMPORTED_KEY)) return null; } catch (e) { return null; }
+  const out = { games: {}, name: '' };
+  for (const key of LEGACY_KEYS) {
+    let d = null;
+    try { d = JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { d = null; }
+    if (!d || typeof d.games !== 'object') continue;
+    if (!out.name && d.name) out.name = String(d.name).slice(0, 24);
+    for (const g of GAMES) {
+      const old = d.games[g.id];
+      if (!old || typeof old.typed !== 'object') continue;
+      const typed = {};
+      for (const i of typedIdx(g)) {
+        const v = String(old.typed[i] || ''), p = g.parts[i];
+        if (!v) continue;
+        if (key === 'build-a-game-lab-v3') typed[i] = v.slice(0, p.letters.length);
+        else {
+          // Full code typed: keep the letters of the marked words inside the part that was typed correctly
+          let ok = 0;
+          while (ok < v.length && v[ok] === p.code[ok]) ok++;
+          const letters = p.slots.filter(pos => pos < ok).map(pos => p.code[pos]).join('');
+          if (letters) typed[i] = letters;
+        }
+      }
+      const cand = { typed, keys: +old.keys || 0, errs: +old.errs || 0, started: old.started, finished: old.finished, runs: +old.runs || 0 };
+      if (progressOf(g, cand) > progressOf(g, out.games[g.id])) out.games[g.id] = cand;
+    }
+  }
+  return GAMES.some(g => progressOf(g, out.games[g.id]) > 0) ? out : null;
+}
+let legacy = null;
+function renderLegacy() {
+  legacy = readLegacy();
+  $('legacy-card').hidden = !legacy;
+  if (!legacy) return;
+  $('legacy-list').innerHTML = GAMES.filter(g => progressOf(g, legacy.games[g.id]) > 0).map(g => {
+    const s = legacy.games[g.id];
+    const n = typedIdx(g).filter(i => ((s.typed || {})[i] || '') === g.parts[i].letters).length;
+    return n === 5 ? `<li class="built">${esc(g.name)}: built &#10003;</li>` : `<li>${esc(g.name)}: ${n} of 5 parts</li>`;
+  }).join('');
+  $('legacy-name1').value = legacy.name || '';
+  $('legacy-name2').value = '';
+  $('legacy-error').hidden = true;
+}
+$('legacy-card').addEventListener('submit', e => {
+  e.preventDefault();
+  if (!legacy) return;
+  const names = [$('legacy-name1').value.trim(), $('legacy-name2').value.trim()].filter(Boolean);
+  if (!names.length) { $('legacy-error').textContent = 'Type at least one name.'; $('legacy-error').hidden = false; $('legacy-name1').focus(); return; }
+  const id = teamKey(names);
+  const team = teamsDb.teams[id] ? JSON.parse(JSON.stringify(teamsDb.teams[id])) : { games: {}, current: GAMES[0].id, names };
+  team.games = team.games || {};
+  // Keep whichever copy of each game has more done, so nothing the team already saved is lost
+  for (const g of GAMES) if (progressOf(g, legacy.games[g.id]) > progressOf(g, team.games[g.id])) team.games[g.id] = legacy.games[g.id];
+  team.savedAt = Date.now();
+  teamsDb.teams[id] = team;
+  try {
+    localStorage.setItem(TEAMS_KEY, JSON.stringify(teamsDb));
+    localStorage.setItem(IMPORTED_KEY, String(Date.now()));
+  } catch (err) { $('legacy-error').textContent = 'This computer would not let the page save. Ask your teacher.'; $('legacy-error').hidden = false; return; }
+  enterTeam(id, team.names || names);
+  setStatus(`<b>Done! Your earlier work is now saved to ${esc(teamName())}.</b> Pick any game above to carry on. Games you finished show <b>Built</b>.`, true);
+});
+
 function showTeamScreen() {
   stopLab(); clearConsole();
   teamId = null; dirty = false;
   $('work').hidden = true; $('teambar').hidden = true; $('team-view').hidden = false;
   $('name1').value = ''; $('name2').value = ''; $('team-error').hidden = true;
   renderSavedTeams();
+  renderLegacy();
 }
 function enterTeam(id, names) {
   const saved = teamsDb.teams[id];
