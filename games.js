@@ -7,8 +7,8 @@ const GAMES = [
   parts: [
     { t: 1, title: 'Make the basket', desc: 'An object holds the basket\'s position and size. Two variables count your score and lives.',
       code: `const basket = { x: 160, y: 370, w: 80, h: 14 };
-let score = 0;
-let lives = 3;` },
+[[let score]] = 0;
+[[let lives]] = 3;` },
     { t: 0, title: 'The falling star', code: `const star = { x: 200, y: 0, r: 10, speed: 3 };
 function resetStar() {
   star.x = 20 + Math.random() * (W - 40);
@@ -18,8 +18,8 @@ function resetStar() {
 resetStar();` },
     { t: 1, title: 'Move with the arrow keys', desc: 'Each frame, check which arrow is held and slide the basket. The last line keeps it on screen.',
       code: `function moveBasket() {
-  if (keys.ArrowLeft) basket.x -= 6;
-  if (keys.ArrowRight) basket.x += 6;
+  if (keys.[[ArrowLeft]]) basket.x -= 6;
+  if (keys.[[ArrowRight]]) basket.x += 6;
   basket.x = Math.max(0, Math.min(W - basket.w, basket.x));
 }` },
     { t: 1, title: 'Catch or miss', desc: 'The star falls a little every frame. If it lands inside the basket you score; if it falls off the bottom you lose a life.',
@@ -27,11 +27,11 @@ resetStar();` },
   star.y += star.speed;
   const inX = star.x > basket.x && star.x < basket.x + basket.w;
   if (inX && star.y + star.r >= basket.y) {
-    score++;
-    resetStar();
+    [[score++]];
+    [[resetStar]]();
   }
   if (star.y > H) {
-    lives--;
+    [[lives--]];
     resetStar();
   }
 }` },
@@ -47,17 +47,17 @@ resetStar();` },
 }` },
     { t: 1, title: 'Show the score', desc: 'fillText writes words onto the game screen at an x and y position.',
       code: `function drawScore() {
-  ctx.fillStyle = 'white';
+  ctx.fillStyle = '[[white]]';
   ctx.font = '18px sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText('Score: ' + score + '  Lives: ' + lives, 10, 24);
+  ctx.fillText('[[Score]]: ' + score + '  [[Lives]]: ' + lives, 10, 24);
 }` },
     { t: 1, title: 'The game loop', desc: 'The heart of every game: move, update, draw, then ask the browser to run the loop again on the next frame.',
       code: `function loop() {
   if (lives <= 0) return gameOver('Score: ' + score);
-  moveBasket();
-  updateStar();
-  draw();
+  [[moveBasket]]();
+  [[updateStar]]();
+  [[draw]]();
   drawScore();
   requestAnimationFrame(loop);
 }
@@ -82,12 +82,12 @@ function randomCell() {
   return c;
 }` },
     { t: 1, title: 'Place the food', desc: 'Put the first food on a random empty square and start the score at zero.',
-      code: `let food = randomCell();
-let score = 0;` },
+      code: `let [[food]] = [[randomCell]]();
+let [[score]] = 0;` },
     { t: 1, title: 'Steer with the arrows', desc: 'A lookup table turns each arrow key into a direction. The check stops the snake reversing into itself.',
       code: `const turns = {
   ArrowUp: { x: 0, y: -1 }, ArrowDown: { x: 0, y: 1 },
-  ArrowLeft: { x: -1, y: 0 }, ArrowRight: { x: 1, y: 0 }
+  [[ArrowLeft]]: { x: -1, y: 0 }, [[ArrowRight]]: { x: 1, y: 0 }
 };
 addEventListener('keydown', e => {
   const t = turns[e.key];
@@ -96,11 +96,11 @@ addEventListener('keydown', e => {
     { t: 1, title: 'Eat the food', desc: 'If the head lands on the food, add a point and move the food. Returning true tells the snake to grow.',
       code: `function eat(head) {
   if (head.x === food.x && head.y === food.y) {
-    score++;
-    food = randomCell();
-    return true;
+    [[score++]];
+    food = [[randomCell]]();
+    return [[true]];
   }
-  return false;
+  return [[false]];
 }` },
     { t: 0, title: 'Move one square and check for crashes', code: `function step() {
   dir = nextDir;
@@ -115,9 +115,9 @@ addEventListener('keydown', e => {
 }` },
     { t: 1, title: 'Draw the snake', desc: 'Loop over every square of the snake. The head (index 0) gets a brighter colour.',
       code: `function drawSnake() {
-  snake.forEach((s, i) => {
+  snake.[[forEach]]((s, i) => {
     ctx.fillStyle = i === 0 ? '#b4f06a' : '#5fcf5f';
-    ctx.fillRect(s.x * CELL + 1, s.y * CELL + 1, CELL - 2, CELL - 2);
+    ctx.[[fillRect]](s.x * CELL + 1, s.y * CELL + 1, CELL - 2, CELL - 2);
   });
 }` },
     { t: 0, title: 'Draw the board and score', code: `function draw() {
@@ -135,11 +135,11 @@ addEventListener('keydown', e => {
       code: `let last = 0;
 function loop(time) {
   if (time - last > 120) {
-    step();
+    [[step]]();
     last = time;
   }
-  draw();
-  if (!alive) return gameOver('Score: ' + score);
+  [[draw]]();
+  if (!alive) return [[gameOver]]('Score: ' + score);
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);` }
@@ -162,20 +162,20 @@ function serve(dir) {
 }` },
     { t: 1, title: 'Move your paddle', desc: 'Up arrow moves the paddle up (smaller y), down arrow moves it down. Then keep it on screen.',
       code: `function movePlayer() {
-  if (keys.ArrowUp) player.y -= 6;
-  if (keys.ArrowDown) player.y += 6;
+  if (keys.[[ArrowUp]]) player.y -= 6;
+  if (keys.[[ArrowDown]]) player.y += 6;
   player.y = Math.max(0, Math.min(H - PH, player.y));
 }` },
     { t: 1, title: 'The computer player', desc: 'A very simple AI: the computer slides toward the ball, a bit slower than you can move.',
       code: `function moveCpu() {
-  const target = ball.y - PH / 2;
-  if (cpu.y < target) cpu.y += 3.5;
-  if (cpu.y > target) cpu.y -= 3.5;
+  const [[target]] = ball.y - PH / 2;
+  if (cpu.y < [[target]]) cpu.y += 3.5;
+  if (cpu.y > [[target]]) cpu.y -= 3.5;
 }` },
     { t: 1, title: 'Bounce off the walls', desc: 'When the ball touches the top or bottom, flip its up-down speed so it bounces back.',
-      code: `function bounceWalls() {
-  if (ball.y < ball.r) ball.vy = Math.abs(ball.vy);
-  if (ball.y > H - ball.r) ball.vy = -Math.abs(ball.vy);
+      code: `function [[bounceWalls]]() {
+  if (ball.y < ball.r) ball.vy = Math.[[abs]](ball.vy);
+  if (ball.y > H - ball.r) ball.vy = -Math.[[abs]](ball.vy);
 }` },
     { t: 0, title: 'Move the ball and hit paddles', code: `function hitPaddle(p) {
   return ball.x + ball.r > p.x && ball.x - ball.r < p.x + PW && ball.y > p.y && ball.y < p.y + PH;
@@ -195,12 +195,12 @@ function moveBall() {
     { t: 1, title: 'Score points', desc: 'If the ball goes off the left edge the computer scores; off the right edge, you score. Then serve again.',
       code: `function checkScore() {
   if (ball.x < 0) {
-    cpu.score++;
-    serve(1);
+    [[cpu]].score++;
+    [[serve]](1);
   }
   if (ball.x > W) {
-    player.score++;
-    serve(-1);
+    [[player]].score++;
+    [[serve]](-1);
   }
 }` },
     { t: 0, title: 'Draw the court', code: `function draw() {
@@ -226,12 +226,12 @@ function moveBall() {
 }` },
     { t: 1, title: 'The match loop', desc: 'Run every step in order each frame. Stop when someone reaches 5 points.',
       code: `function loop() {
-  movePlayer();
-  moveCpu();
+  [[movePlayer]]();
+  [[moveCpu]]();
   moveBall();
   checkScore();
-  draw();
-  if (player.score === 5) return banner('You win!', 'First to 5 points');
+  [[draw]]();
+  if (player.score === 5) return banner('You [[win]]!', 'First to 5 points');
   if (cpu.score === 5) return banner('Computer wins', 'Try again!');
   requestAnimationFrame(loop);
 }
@@ -250,29 +250,29 @@ for (let i = 0; i < 9; i++) {
 let mole = -1, moleTimer = 0;
 let score = 0, timeLeft = 30, lastTick = 0;` },
     { t: 1, title: 'Pop up a mole', desc: 'Pick one of the 9 holes at random, and decide how many frames the mole stays up.',
-      code: `function popMole() {
-  mole = Math.floor(Math.random() * 9);
-  moleTimer = 50 + Math.random() * 30;
+      code: `function [[popMole]]() {
+  [[mole]] = Math.floor(Math.random() * 9);
+  [[moleTimer]] = 50 + Math.random() * 30;
 }` },
     { t: 1, title: 'Whack on tap', desc: 'onTap gives you where the player tapped. Math.hypot measures the distance to the mole.',
       code: `onTap((x, y) => {
-  if (mole < 0) return;
+  if (mole < 0) [[return]];
   const h = holes[mole];
   if (Math.hypot(x - h.x, y - h.y) < 40) {
-    score++;
-    popMole();
+    [[score++]];
+    [[popMole]]();
   }
 });` },
     { t: 1, title: 'Mole timer', desc: 'Count down every frame. When time runs out, the mole hides and another pops up.',
       code: `function updateMole() {
-  moleTimer--;
-  if (moleTimer <= 0) popMole();
+  [[moleTimer--]];
+  if (moleTimer <= 0) [[popMole]]();
 }` },
     { t: 1, title: 'Countdown clock', desc: 'The loop gets the time in milliseconds. Every 1000 ms, take one second off the clock.',
       code: `function tick(time) {
   if (time - lastTick > 1000) {
-    timeLeft--;
-    lastTick = time;
+    [[timeLeft--]];
+    [[lastTick]] = [[time]];
   }
 }` },
     { t: 0, title: 'Draw the field and moles', code: `function draw() {
@@ -304,10 +304,10 @@ let score = 0, timeLeft = 30, lastTick = 0;` },
 }` },
     { t: 1, title: 'The game loop', desc: 'Tick the clock, update the mole, draw. When time is up, show the final score.',
       code: `function loop(time) {
-  tick(time);
-  updateMole();
-  draw();
-  if (timeLeft <= 0) return banner('Time up!', 'You whacked ' + score + ' moles');
+  [[tick]](time);
+  [[updateMole]]();
+  [[draw]]();
+  if (timeLeft <= 0) return banner('Time [[up]]!', 'You whacked ' + score + ' moles');
   requestAnimationFrame(loop);
 }
 popMole();
@@ -325,14 +325,14 @@ let flipped = [];
 let matches = 0, moves = 0, lockUntil = 0;
 const SIZE = 80, GAP = 12, LEFT = 22, TOP = 36;` },
     { t: 1, title: 'Shuffle the deck', desc: 'Double the symbols so each has a pair, shuffle them, then lay them out 4 cards per row.',
-      code: `const deck = SYMBOLS.concat(SYMBOLS);
-deck.sort(() => Math.random() - 0.5);
+      code: `const deck = SYMBOLS.[[concat]](SYMBOLS);
+deck.[[sort]](() => Math.random() - 0.5);
 deck.forEach((s, i) => {
-  cards.push({ symbol: s, col: i % 4, row: Math.floor(i / 4), open: false, done: false });
+  cards.[[push]]({ symbol: s, col: i % 4, row: Math.floor(i / 4), open: false, done: false });
 });` },
     { t: 1, title: 'Find the tapped card', desc: 'Work out where each card sits on screen and return the one that contains the tap.',
-      code: `function cardAt(x, y) {
-  return cards.find(c => {
+      code: `function [[cardAt]](x, y) {
+  return cards.[[find]](c => {
     const cx = LEFT + c.col * (SIZE + GAP);
     const cy = TOP + c.row * (SIZE + GAP);
     return x > cx && x < cx + SIZE && y > cy && y < cy + SIZE;
@@ -341,11 +341,11 @@ deck.forEach((s, i) => {
     { t: 1, title: 'Flip on tap', desc: 'Flip a face-down card. After two flips, count a move and wait 0.7 seconds before checking.',
       code: `onTap((x, y) => {
   const c = cardAt(x, y);
-  if (!c || c.open || flipped.length === 2) return;
-  c.open = true;
-  flipped.push(c);
+  if (!c || c.[[open]] || flipped.length === 2) return;
+  c.open = [[true]];
+  flipped.[[push]](c);
   if (flipped.length === 2) {
-    moves++;
+    [[moves++]];
     lockUntil = performance.now() + 700;
   }
 });` },
@@ -356,10 +356,10 @@ deck.forEach((s, i) => {
   if (a.symbol === b.symbol) {
     a.done = true;
     b.done = true;
-    matches++;
+    [[matches++]];
   } else {
-    a.open = false;
-    b.open = false;
+    a.open = [[false]];
+    b.open = [[false]];
   }
   flipped = [];
 }` },
@@ -387,9 +387,9 @@ deck.forEach((s, i) => {
 }` },
     { t: 1, title: 'The game loop', desc: 'Check pairs and draw every frame until all 8 pairs are found.',
       code: `function loop(time) {
-  checkPair(time);
-  draw();
-  if (matches === 8) return banner('All matched!', 'You did it in ' + moves + ' moves');
+  [[checkPair]](time);
+  [[draw]]();
+  if (matches === 8) return banner('All [[matched]]!', 'You did it in ' + moves + ' moves');
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);` }
@@ -401,9 +401,9 @@ requestAnimationFrame(loop);` }
   controls: 'Space, the up arrow, or a tap makes the bird flap.',
   parts: [
     { t: 1, title: 'Make the bird', desc: 'vy is the bird\'s up-down speed. GRAVITY pulls it down; FLAP is a negative number because up is minus y.',
-      code: `const bird = { x: 90, y: 200, vy: 0, r: 12 };
-const GRAVITY = 0.45;
-const FLAP = -7.5;` },
+      code: `const [[bird]] = { x: 90, y: 200, vy: 0, r: 12 };
+const [[GRAVITY]] = 0.45;
+const [[FLAP]] = -7.5;` },
     { t: 0, title: 'Pipes, score and restart', code: `let pipes = [];
 const GAP = 130, PIPE_W = 54;
 let frame = 0, score = 0;
@@ -418,9 +418,9 @@ function restart() {
 }` },
     { t: 1, title: 'Flap', desc: 'A flap gives the bird an upward kick. After a crash, the next flap restarts the game.',
       code: `function flap() {
-  if (state === 'over') return restart();
-  state = 'playing';
-  bird.vy = FLAP;
+  if (state === 'over') return [[restart]]();
+  state = '[[playing]]';
+  bird.vy = [[FLAP]];
 }
 addEventListener('keydown', e => {
   if (e.key === ' ' || e.key === 'ArrowUp') flap();
@@ -428,9 +428,9 @@ addEventListener('keydown', e => {
 onTap(flap);` },
     { t: 1, title: 'Gravity', desc: 'Every frame gravity adds to the speed, and the speed moves the bird. Hitting the ground or sky ends the game.',
       code: `function fall() {
-  bird.vy += GRAVITY;
-  bird.y += bird.vy;
-  if (bird.y > H - bird.r || bird.y < bird.r) state = 'over';
+  bird.vy += [[GRAVITY]];
+  bird.y += bird.[[vy]];
+  if (bird.y > H - bird.r || bird.y < bird.r) state = '[[over]]';
 }` },
     { t: 0, title: 'Spawn pipes and check crashes', code: `function updatePipes() {
   if (frame % 95 === 0) {
@@ -451,9 +451,9 @@ onTap(flap);` },
     { t: 1, title: 'Draw the bird', desc: 'arc draws a circle: centre x, centre y, radius, then a full turn (2 times pi).',
       code: `function drawBird() {
   ctx.fillStyle = '#ffcf3a';
-  ctx.beginPath();
-  ctx.arc(bird.x, bird.y, bird.r, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.[[beginPath]]();
+  ctx.[[arc]](bird.x, bird.y, bird.r, 0, Math.PI * 2);
+  ctx.[[fill]]();
 }` },
     { t: 0, title: 'Draw the sky, pipes and messages', code: `function draw() {
   ctx.fillStyle = '#7ec8f2';
@@ -475,11 +475,11 @@ onTap(flap);` },
     { t: 1, title: 'The game loop', desc: 'The world only moves while you are playing, but the screen is drawn every frame.',
       code: `function loop() {
   if (state === 'playing') {
-    frame++;
-    fall();
-    updatePipes();
+    [[frame++]];
+    [[fall]]();
+    [[updatePipes]]();
   }
-  draw();
+  [[draw]]();
   requestAnimationFrame(loop);
 }
 loop();` }
@@ -494,16 +494,16 @@ loop();` }
 const ball = { x: 200, y: 300, vx: 3, vy: -4, r: 6 };
 let lives = 3, score = 0;` },
     { t: 1, title: 'Build the wall of bricks', desc: 'Two loops inside each other make a grid: 5 rows, 8 bricks in each row.',
-      code: `const bricks = [];
+      code: `const [[bricks]] = [];
 for (let row = 0; row < 5; row++) {
   for (let col = 0; col < 8; col++) {
-    bricks.push({ x: col * 50 + 2, y: row * 22 + 40, w: 46, h: 18, alive: true });
+    bricks.[[push]]({ x: col * 50 + 2, y: row * 22 + 40, w: 46, h: 18, alive: [[true]] });
   }
 }` },
     { t: 1, title: 'Move the paddle', desc: 'Slide the paddle with the arrow keys and keep it inside the screen.',
       code: `function movePaddle() {
-  if (keys.ArrowLeft) paddle.x -= 7;
-  if (keys.ArrowRight) paddle.x += 7;
+  if (keys.[[ArrowLeft]]) paddle.x -= 7;
+  if (keys.[[ArrowRight]]) paddle.x += 7;
   paddle.x = Math.max(0, Math.min(W - paddle.w, paddle.x));
 }` },
     { t: 0, title: 'Move and bounce the ball', code: `function moveBall() {
@@ -525,13 +525,13 @@ for (let row = 0; row < 5; row++) {
 }` },
     { t: 1, title: 'Smash bricks', desc: 'Check every brick. If the ball overlaps one that is still standing, break it and bounce.',
       code: `function hitBricks() {
-  bricks.forEach(b => {
+  bricks.[[forEach]](b => {
     const inX = ball.x > b.x && ball.x < b.x + b.w;
     const inY = ball.y - ball.r < b.y + b.h && ball.y + ball.r > b.y;
     if (b.alive && inX && inY) {
-      b.alive = false;
+      b.alive = [[false]];
       ball.vy *= -1;
-      score += 10;
+      [[score]] += 10;
     }
   });
 }` },
@@ -539,9 +539,9 @@ for (let row = 0; row < 5; row++) {
       code: `function drawBricks() {
   const colors = ['#ff5d73', '#ffa94d', '#ffd43b', '#69db7c', '#4dabf7'];
   bricks.forEach((b, i) => {
-    if (!b.alive) return;
+    if (!b.alive) [[return]];
     ctx.fillStyle = colors[Math.floor(i / 8)];
-    ctx.fillRect(b.x, b.y, b.w, b.h);
+    ctx.[[fillRect]](b.x, b.y, b.w, b.h);
   });
 }` },
     { t: 0, title: 'Draw everything', code: `function draw() {
@@ -559,10 +559,10 @@ for (let row = 0; row < 5; row++) {
 }` },
     { t: 1, title: 'The game loop', desc: 'Lose all your lives and it is game over. Break every brick and you win.',
       code: `function loop() {
-  movePaddle();
+  [[movePaddle]]();
   moveBall();
-  hitBricks();
-  draw();
+  [[hitBricks]]();
+  [[draw]]();
   if (lives <= 0) return gameOver('Score: ' + score);
   if (bricks.every(b => !b.alive)) return banner('You win!', 'Score: ' + score);
   requestAnimationFrame(loop);
@@ -583,25 +583,25 @@ const stars = [];
 for (let i = 0; i < 50; i++) stars.push({ x: Math.random() * W, y: Math.random() * H });` },
     { t: 1, title: 'Fly the ship', desc: 'Move left and right with the arrows, staying inside the screen.',
       code: `function moveShip() {
-  if (keys.ArrowLeft) ship.x -= 5;
-  if (keys.ArrowRight) ship.x += 5;
+  if (keys.[[ArrowLeft]]) ship.x -= 5;
+  if (keys.[[ArrowRight]]) ship.x += 5;
   ship.x = Math.max(15, Math.min(W - 15, ship.x));
 }` },
     { t: 1, title: 'Shoot lasers', desc: 'Holding Space fires a laser, but the cooldown stops you firing every single frame.',
       code: `function shoot() {
-  cooldown--;
+  [[cooldown--]];
   if (keys[' '] && cooldown <= 0) {
-    bullets.push({ x: ship.x, y: ship.y - 12 });
-    cooldown = 12;
+    bullets.[[push]]({ x: ship.x, y: ship.y - 12 });
+    [[cooldown]] = 12;
   }
   bullets.forEach(b => b.y -= 8);
 }` },
     { t: 1, title: 'Send in the aliens', desc: 'Every 50 frames a new alien appears at a random spot with a random speed.',
       code: `function spawnEnemies() {
   if (frame % 50 === 0) {
-    enemies.push({ x: 20 + Math.random() * (W - 40), y: -20, speed: 1.5 + Math.random() * 1.5 });
+    enemies.[[push]]({ x: 20 + Math.random() * (W - 40), y: -20, speed: 1.5 + Math.random() * 1.5 });
   }
-  enemies.forEach(e => e.y += e.speed);
+  enemies.[[forEach]](e => e.y += e.[[speed]]);
 }` },
     { t: 0, title: 'Laser hits and escaped aliens', code: `function checkHits() {
   enemies.forEach(e => {
@@ -624,10 +624,10 @@ for (let i = 0; i < 50; i++) stars.push({ x: Math.random() * W, y: Math.random()
       code: `function drawShip() {
   ctx.fillStyle = '#6ee7f9';
   ctx.beginPath();
-  ctx.moveTo(ship.x, ship.y - 12);
-  ctx.lineTo(ship.x - 15, ship.y + 10);
+  ctx.[[moveTo]](ship.x, ship.y - 12);
+  ctx.[[lineTo]](ship.x - 15, ship.y + 10);
   ctx.lineTo(ship.x + 15, ship.y + 10);
-  ctx.fill();
+  ctx.[[fill]]();
 }` },
     { t: 0, title: 'Draw space, lasers and aliens', code: `function draw() {
   ctx.fillStyle = '#05060f';
@@ -654,12 +654,12 @@ for (let i = 0; i < 50; i++) stars.push({ x: Math.random() * W, y: Math.random()
 }` },
     { t: 1, title: 'The game loop', desc: 'Count frames, move everything, check hits, draw. Three aliens escape and it is over.',
       code: `function loop() {
-  frame++;
-  moveShip();
-  shoot();
+  [[frame++]];
+  [[moveShip]]();
+  [[shoot]]();
   spawnEnemies();
   checkHits();
-  draw();
+  [[draw]]();
   if (lives <= 0) return gameOver('Aliens zapped: ' + score);
   requestAnimationFrame(loop);
 }
@@ -677,22 +677,22 @@ let traffic = [];
 let speed = 4, score = 0, frame = 0, crashed = false, roadOffset = 0;` },
     { t: 1, title: 'Change lanes', desc: 'Each key press moves the car one lane. The checks stop it driving off the road.',
       code: `addEventListener('keydown', e => {
-  if (e.key === 'ArrowLeft' && car.lane > 0) car.lane--;
-  if (e.key === 'ArrowRight' && car.lane < 2) car.lane++;
+  if (e.key === '[[ArrowLeft]]' && car.lane > 0) car.lane--;
+  if (e.key === '[[ArrowRight]]' && car.lane < 2) car.lane++;
 });` },
     { t: 1, title: 'Add traffic', desc: 'Every 60 frames, a new car appears above the screen in a random lane.',
-      code: `function addTraffic() {
+      code: `function [[addTraffic]]() {
   if (frame % 60 === 0) {
-    const lane = Math.floor(Math.random() * 3);
-    traffic.push({ lane: lane, y: -60 });
+    const [[lane]] = Math.floor(Math.random() * 3);
+    traffic.[[push]]({ lane: lane, y: -60 });
   }
 }` },
     { t: 1, title: 'Drive faster', desc: 'Traffic moves down the screen. Cars that leave are removed, and the speed creeps up.',
       code: `function moveTraffic() {
-  traffic.forEach(t => t.y += speed);
+  traffic.[[forEach]](t => t.y += [[speed]]);
   traffic = traffic.filter(t => t.y < H + 60);
-  speed += 0.002;
-  score++;
+  [[speed]] += 0.002;
+  [[score++]];
 }` },
     { t: 0, title: 'Check for a crash', code: `function checkCrash() {
   traffic.forEach(t => {
@@ -700,9 +700,9 @@ let speed = 4, score = 0, frame = 0, crashed = false, roadOffset = 0;` },
   });
 }` },
     { t: 1, title: 'Draw a car', desc: 'One function draws any car. You pass in where it goes and what colour it is.',
-      code: `function drawCar(x, y, color) {
+      code: `function drawCar(x, y, [[color]]) {
   ctx.fillStyle = color;
-  ctx.fillRect(x - 20, y - 30, 40, 60);
+  ctx.[[fillRect]](x - 20, y - 30, 40, 60);
   ctx.fillStyle = '#1b1b1b';
   ctx.fillRect(x - 14, y - 18, 28, 14);
 }` },
@@ -727,11 +727,11 @@ let speed = 4, score = 0, frame = 0, crashed = false, roadOffset = 0;` },
 }` },
     { t: 1, title: 'The game loop', desc: 'Add, move, check, draw. One crash and the drive is over.',
       code: `function loop() {
-  frame++;
-  addTraffic();
+  [[frame++]];
+  [[addTraffic]]();
   moveTraffic();
   checkCrash();
-  draw();
+  [[draw]]();
   if (crashed) return gameOver('Distance: ' + Math.floor(score / 10) + ' m');
   requestAnimationFrame(loop);
 }
@@ -748,27 +748,27 @@ const dino = { x: 60, y: GROUND, w: 30, h: 36, vy: 0 };
 let cactuses = [];
 let speed = 5, score = 0, nextCactus = 60, over = false;` },
     { t: 1, title: 'Jump', desc: 'The dino can only jump while its feet are on the ground. -12 sends it upward.',
-      code: `function jump() {
+      code: `function [[jump]]() {
   if (dino.y >= GROUND) dino.vy = -12;
 }
 addEventListener('keydown', e => {
-  if (e.key === ' ' || e.key === 'ArrowUp') jump();
+  if (e.key === ' ' || e.key === '[[ArrowUp]]') [[jump]]();
 });
-onTap(jump);` },
+[[onTap]](jump);` },
     { t: 1, title: 'Gravity', desc: 'Gravity pulls the dino back down each frame, and the ground stops it falling through.',
-      code: `function applyGravity() {
-  dino.vy += 0.6;
+      code: `function [[applyGravity]]() {
+  dino.[[vy]] += 0.6;
   dino.y += dino.vy;
-  if (dino.y > GROUND) {
+  if (dino.y > [[GROUND]]) {
     dino.y = GROUND;
     dino.vy = 0;
   }
 }` },
     { t: 1, title: 'Grow cactuses', desc: 'A countdown decides when the next cactus appears. Each one gets a random height.',
       code: `function spawnCactus() {
-  nextCactus--;
+  [[nextCactus--]];
   if (nextCactus <= 0) {
-    cactuses.push({ x: W, w: 20, h: 30 + Math.random() * 25 });
+    cactuses.[[push]]({ x: W, w: 20, h: 30 + Math.random() * 25 });
     nextCactus = 50 + Math.random() * 60;
   }
 }` },
@@ -787,8 +787,8 @@ onTap(jump);` },
       code: `function drawDino() {
   ctx.fillStyle = '#5b8c3a';
   ctx.fillRect(dino.x, dino.y - dino.h, dino.w, dino.h);
-  ctx.fillStyle = 'white';
-  ctx.fillRect(dino.x + 20, dino.y - dino.h + 6, 6, 6);
+  ctx.fillStyle = '[[white]]';
+  ctx.[[fillRect]](dino.x + 20, dino.y - dino.h + 6, 6, 6);
 }` },
     { t: 0, title: 'Draw the desert', code: `function draw() {
   ctx.fillStyle = '#f4f1e8';
@@ -806,13 +806,29 @@ onTap(jump);` },
     { t: 1, title: 'The game loop', desc: 'Gravity, cactuses, draw, repeat, until the dino hits a cactus.',
       code: `function loop() {
   applyGravity();
-  spawnCactus();
+  [[spawnCactus]]();
   moveCactuses();
-  draw();
-  if (over) return gameOver('Score: ' + Math.floor(score / 5));
+  [[draw]]();
+  if ([[over]]) return gameOver('Score: ' + Math.floor(score / 5));
   requestAnimationFrame(loop);
 }
 loop();` }
   ]
 }
 ];
+
+/* Words marked [[like this]] in a part are what the student types. Only their letters are typed;
+   spaces, numbers and symbols are filled in. This turns the marks into letter slots. */
+GAMES.forEach(g => g.parts.forEach(p => {
+  if (!p.t) return;
+  let code = '', inside = false;
+  p.slots = [];
+  for (let i = 0; i < p.code.length; i++) {
+    if (p.code.startsWith('[[', i)) { inside = true; i++; continue; }
+    if (p.code.startsWith(']]', i)) { inside = false; i++; continue; }
+    if (inside && /[A-Za-z]/.test(p.code[i])) p.slots.push(code.length);
+    code += p.code[i];
+  }
+  p.code = code;
+  p.letters = p.slots.map(k => code[k]).join('');
+}));
