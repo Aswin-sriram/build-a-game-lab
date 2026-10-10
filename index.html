@@ -9,7 +9,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
 <style>
-html { color-scheme: light; } body { margin: 0; }
+/* Always light, whatever the device setting */
+:root, :root[data-theme="dark"] { color-scheme: light; }
 /* Layout: game shelf on top, then a workbench — typing editor on the left, the simulator screen on the right */
 :root {
   --bg: #eef1f5;
@@ -32,22 +33,6 @@ html { color-scheme: light; } body { margin: 0; }
   --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
   --f-mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #12161f; --panel: #1a202c; --ink: #e7ebf2; --muted: #9aa4b6; --line: #2d3545;
-    --accent: #ff7a33; --accent-ink: #1a0d04; --accent-soft: #3a2316; --screen: #070a12; --screen-ink: #cfd7e6;
-    --code-bg: #141923; --ghost: #4f5a6e; --ok: #4ccf86; --ok-soft: #173326; --bad: #ff6b76; --bad-soft: #43202a;
-    --t-k: #e48ad0; --t-s: #8fd99f; --t-n: #ffb27a; --t-c: #6f7a8e;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #12161f; --panel: #1a202c; --ink: #e7ebf2; --muted: #9aa4b6; --line: #2d3545;
-  --accent: #ff7a33; --accent-ink: #1a0d04; --accent-soft: #3a2316; --screen: #070a12; --screen-ink: #cfd7e6;
-  --code-bg: #141923; --ghost: #4f5a6e; --ok: #4ccf86; --ok-soft: #173326; --bad: #ff6b76; --bad-soft: #43202a;
-  --t-k: #e48ad0; --t-s: #8fd99f; --t-n: #ffb27a; --t-c: #6f7a8e;
-  color-scheme: dark;
 }
 * { box-sizing: border-box; }
 pre, code, .listing, .typebox { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
@@ -107,7 +92,7 @@ input[type="text"] { font: inherit; color: var(--ink); background: var(--panel);
 .tp-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .tp-num { font-family: var(--f-mono); font-size: 12px; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; }
 .tpart.done .tp-num { color: var(--ok); }
-.tp-head h3 { font-size: 17px; font-weight: 800; flex: 1; min-width: 0; }
+.tp-head h3 { font-size: 17px; font-weight: 800; flex: 1 1 14ch; min-width: 0; }
 .tp-state { font-family: var(--f-mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .tpart.done .tp-state { color: var(--ok); font-weight: 600; }
 .tp-desc { margin: 0; color: var(--muted); font-size: 14px; }
@@ -125,7 +110,7 @@ input[type="text"] { font: inherit; color: var(--ink); background: var(--panel);
 .typebox .cur { color: var(--ink); background: color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 2px; }
 .typebox:focus-within .cur { animation: blink 1s steps(1) infinite; }
 @keyframes blink { 50% { background: transparent; } }
-.typebox .hint-tap { position: absolute; right: 8px; bottom: 8px; font-size: 11.5px; color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; pointer-events: none; }
+.typebox .hint-tap { display: block; width: fit-content; margin-top: 6px; font-size: 11.5px; color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; pointer-events: none; }
 .typebox:focus-within .hint-tap { display: none; }
 .t-k { color: var(--t-k); font-weight: 600; } .t-s { color: var(--t-s); } .t-n { color: var(--t-n); } .t-c { color: var(--t-c); font-style: italic; }
 .ed-note { margin: 0; font-size: 13px; color: var(--muted); }
