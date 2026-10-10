@@ -73,6 +73,32 @@ input[type="text"] { font: inherit; color: var(--ink); background: var(--panel);
 .team-error { margin: 0; color: var(--bad); font-weight: 700; }
 .btn.big { font-size: 17px; padding: 12px 18px; align-self: flex-start; }
 .side-cards { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.teacher-link { align-self: flex-start; background: none; border: 0; padding: 4px 0; color: var(--muted); font-size: 13.5px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.teacher-link:hover { color: var(--ink); }
+
+/* teacher view */
+.tv-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px 20px; flex-wrap: wrap; }
+.tv-head h2 { font-size: clamp(22px, 3vw, 28px); }
+.tv-sum { margin: 4px 0 0; color: var(--muted); }
+.tv-sum b { color: var(--ink); }
+.tv-note { margin: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--accent); background: var(--accent-soft); font-size: 14px; }
+.tv-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+.tv-table { border-collapse: collapse; width: 100%; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.tv-table th, .tv-table td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; }
+.tv-table thead th { background: var(--code-bg); font-size: 12px; color: var(--muted); font-weight: 700; vertical-align: bottom; }
+.tv-table th.team, .tv-table td.team { text-align: left; position: sticky; left: 0; background: var(--panel); font-weight: 700; }
+.tv-table thead th.team { background: var(--code-bg); }
+.tv-table tbody tr:last-child td { border-bottom: 0; }
+.tv-table td.total b { font-size: 15px; }
+.tv-table td.saved { color: var(--muted); font-size: 12.5px; }
+.tv-table .c-built { color: var(--ok); font-weight: 800; background: var(--ok-soft); }
+.tv-table .c-part { color: var(--accent); font-weight: 700; }
+.tv-table .c-none { color: var(--ghost); }
+.tv-table .empty-row { color: var(--muted); padding: 20px; }
+.tv-key { margin: 0; font-size: 13px; color: var(--muted); }
+.tv-key .k { font-weight: 800; }
+.tv-key .built { color: var(--ok); } .tv-key .part { color: var(--accent); } .tv-key .none { color: var(--ghost); }
+.tv-copybox { width: 100%; min-height: 120px; font-family: var(--f-mono); font-size: 12px; border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
 .team-card.legacy { border: 1.5px solid var(--accent); background: var(--accent-soft); }
 .legacy-list { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
 .legacy-list li { font-size: 13px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; }
@@ -269,7 +295,26 @@ input[type="text"] { font: inherit; color: var(--ink); background: var(--panel);
         <h3>Saved teams on this computer</h3>
         <div class="saved-list" id="saved-teams"></div>
       </div>
+      <button class="teacher-link" id="open-teacher">Teacher view: see which games each team finished &rarr;</button>
     </div>
+  </section>
+
+  <section class="team-card teacher" id="teacher-view" hidden>
+    <div class="tv-head">
+      <div>
+        <span class="tb-label">Teacher view</span>
+        <h2>Class progress on this computer</h2>
+        <p class="tv-sum" id="tv-summary"></p>
+      </div>
+      <div class="tb-actions">
+        <button class="btn primary" id="tv-copy">Copy for spreadsheet</button>
+        <button class="btn" id="tv-back">Back to start</button>
+      </div>
+    </div>
+    <p class="tv-note" id="tv-legacy" hidden>This computer also has work from before teams were added that has not been saved to a team yet. It is shown on the start screen under &ldquo;Work from before&rdquo;.</p>
+    <div class="tv-scroll"><table class="tv-table" id="tv-table"></table></div>
+    <p class="tv-key"><span class="k built">&#10003;</span> built &nbsp; <span class="k part">3/5</span> parts typed &nbsp; <span class="k none">&ndash;</span> not started. Only saved work is shown.</p>
+    <textarea class="tv-copybox" id="tv-copybox" readonly hidden aria-label="Progress as text"></textarea>
   </section>
 
   <div class="work" id="work" hidden>
@@ -1040,10 +1085,66 @@ $('legacy-card').addEventListener('submit', e => {
   setStatus(`<b>Done! Your earlier work is now saved to ${esc(teamName())}.</b> Pick any game above to carry on. Games you finished show <b>Built</b>.`, true);
 });
 
+/* ---------- Teacher view: every saved team on this computer and the games they finished ---------- */
+const partsDoneIn = (g, s) => s ? typedIdx(g).filter(i => ((s.typed || {})[i] || '') === g.parts[i].letters).length : 0;
+function teacherRows() {
+  return Object.values(teamsDb.teams)
+    .map(t => ({ name: teamName(t.names || []), savedAt: t.savedAt, cells: GAMES.map(g => partsDoneIn(g, (t.games || {})[g.id])) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+function renderTeacher() {
+  const rows = teacherRows();
+  const totalBuilt = rows.reduce((n, r) => n + r.cells.filter(c => c === 5).length, 0);
+  const allTen = rows.filter(r => r.cells.every(c => c === 5)).length;
+  $('tv-summary').innerHTML = rows.length
+    ? `<b>${rows.length}</b> team${rows.length === 1 ? '' : 's'} &middot; <b>${totalBuilt}</b> game${totalBuilt === 1 ? '' : 's'} built in total${allTen ? ` &middot; <b>${allTen}</b> finished all 10` : ''}`
+    : 'No teams have saved on this computer yet.';
+  const head = '<thead><tr><th class="team" scope="col">Team</th><th scope="col">Games built</th>' +
+    GAMES.map(g => `<th scope="col">${esc(g.name)}</th>`).join('') + '<th scope="col">Last saved</th></tr></thead>';
+  const body = rows.length ? rows.map(r => {
+    const built = r.cells.filter(c => c === 5).length;
+    const when = r.savedAt ? new Date(r.savedAt).toLocaleString([], { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '';
+    return `<tr><td class="team">${esc(r.name)}</td><td class="total"><b>${built}</b> / ${GAMES.length}</td>` +
+      r.cells.map(c => c === 5 ? '<td class="c-built" title="Built">&#10003;</td>' : c ? `<td class="c-part">${c}/5</td>` : '<td class="c-none">&ndash;</td>').join('') +
+      `<td class="saved">${esc(when)}</td></tr>`;
+  }).join('') : `<tr><td class="empty-row" colspan="${GAMES.length + 3}">When students press Save progress, their team appears here.</td></tr>`;
+  $('tv-table').innerHTML = head + '<tbody>' + body + '</tbody>';
+  $('tv-legacy').hidden = !readLegacy();
+  $('tv-copybox').hidden = true;
+  $('tv-copy').disabled = !rows.length;
+}
+function teacherText() {
+  const lines = [['Team', 'Games built', ...GAMES.map(g => g.name), 'Last saved'].join('\t')];
+  for (const r of teacherRows()) {
+    lines.push([r.name, r.cells.filter(c => c === 5).length, ...r.cells.map(c => c === 5 ? 'Built' : c ? c + ' of 5 parts' : '-'),
+      r.savedAt ? new Date(r.savedAt).toLocaleString() : ''].join('\t'));
+  }
+  return lines.join('\n');
+}
+function showTeacher() {
+  stopLab(); clearConsole();
+  teamId = null; dirty = false;
+  $('work').hidden = true; $('teambar').hidden = true; $('team-view').hidden = true; $('teacher-view').hidden = false;
+  renderTeacher();
+  window.scrollTo(0, 0);
+}
+$('open-teacher').addEventListener('click', showTeacher);
+$('tv-back').addEventListener('click', () => {
+  try { if (location.hash === '#teacher') history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  showTeamScreen();
+});
+$('tv-copy').addEventListener('click', () => {
+  const text = teacherText(), btn = $('tv-copy');
+  const fallback = () => { const box = $('tv-copybox'); box.value = text; box.hidden = false; box.focus(); box.select(); btn.textContent = 'Press Ctrl+C to copy'; };
+  try {
+    navigator.clipboard.writeText(text).then(() => { btn.textContent = 'Copied! Paste into a spreadsheet'; setTimeout(() => { btn.textContent = 'Copy for spreadsheet'; }, 2500); }, fallback);
+  } catch (e) { fallback(); }
+});
+
 function showTeamScreen() {
   stopLab(); clearConsole();
   teamId = null; dirty = false;
-  $('work').hidden = true; $('teambar').hidden = true; $('team-view').hidden = false;
+  $('work').hidden = true; $('teambar').hidden = true; $('teacher-view').hidden = true; $('team-view').hidden = false;
   $('name1').value = ''; $('name2').value = ''; $('team-error').hidden = true;
   renderSavedTeams();
   renderLegacy();
@@ -1108,6 +1209,7 @@ $('switch-btn').addEventListener('click', () => {
 window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 
 showTeamScreen();
+if (location.hash === '#teacher') showTeacher();
 route();
 </script>
 </body>
