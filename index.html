@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Pick a game, type the 5 key parts of its code, run it and share it.">
+<title>Build-a-Game Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+html { color-scheme: light; } body { margin: 0; }
+/* Layout: game shelf on top, then a workbench — typing editor on the left, the simulator screen on the right */
+:root {
+  --bg: #eef1f5;
+  --panel: #ffffff;
+  --ink: #18202e;
+  --muted: #5b6577;
+  --line: #d5dbe5;
+  --accent: #e2570f;
+  --accent-ink: #ffffff;
+  --accent-soft: #fdeee4;
+  --screen: #0d1220;
+  --screen-ink: #cfd7e6;
+  --code-bg: #f5f7fa;
+  --ghost: #a3abba;
+  --ok: #1f8a4c;
+  --ok-soft: #e6f4ec;
+  --bad: #c62f3a;
+  --bad-soft: #fde4e6;
+  --t-k: #a3328a; --t-s: #1d7a3a; --t-n: #b0520a; --t-c: #7a8496;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161f; --panel: #1a202c; --ink: #e7ebf2; --muted: #9aa4b6; --line: #2d3545;
+    --accent: #ff7a33; --accent-ink: #1a0d04; --accent-soft: #3a2316; --screen: #070a12; --screen-ink: #cfd7e6;
+    --code-bg: #141923; --ghost: #4f5a6e; --ok: #4ccf86; --ok-soft: #173326; --bad: #ff6b76; --bad-soft: #43202a;
+    --t-k: #e48ad0; --t-s: #8fd99f; --t-n: #ffb27a; --t-c: #6f7a8e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161f; --panel: #1a202c; --ink: #e7ebf2; --muted: #9aa4b6; --line: #2d3545;
+  --accent: #ff7a33; --accent-ink: #1a0d04; --accent-soft: #3a2316; --screen: #070a12; --screen-ink: #cfd7e6;
+  --code-bg: #141923; --ghost: #4f5a6e; --ok: #4ccf86; --ok-soft: #173326; --bad: #ff6b76; --bad-soft: #43202a;
+  --t-k: #e48ad0; --t-s: #8fd99f; --t-n: #ffb27a; --t-c: #6f7a8e;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1400px; margin: 0 auto; padding-inline: 20px; padding-block: 20px 48px; display: flex; flex-direction: column; gap: 20px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible, .typebox:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+input[type="text"] { font: inherit; color: var(--ink); background: var(--panel); border: 1.5px solid var(--line); border-radius: 10px; padding: 8px 12px; min-width: 0; }
+
+/* header */
+.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; }
+.brand h1 { font-size: clamp(26px, 4vw, 38px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
+.brand h1 span { color: var(--accent); }
+.brand p { margin: 6px 0 0; color: var(--muted); max-width: 62ch; }
+.who { display: flex; flex-direction: column; gap: 4px; }
+.who label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.who input { width: 220px; max-width: 100%; }
+
+/* shelf */
+.shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.tile { text-align: left; background: var(--panel); border: 1.5px solid var(--line); border-radius: 12px; padding: 0; overflow: hidden; display: flex; flex-direction: column; transition: border-color .15s, transform .15s; }
+.tile:hover { border-color: var(--muted); transform: translateY(-1px); }
+.tile[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent); }
+.tile .art { height: 54px; background: var(--g-bg); position: relative; display: flex; align-items: flex-end; padding: 8px 10px; }
+.tile .art i { display: block; width: 14px; height: 14px; border-radius: 3px; background: var(--g-fg); box-shadow: 18px -10px 0 -3px var(--g-fg), 34px 2px 0 -5px var(--g-fg); }
+.tile .badge { position: absolute; top: 6px; right: 6px; font-size: 11px; font-weight: 700; background: var(--ok); color: #fff; border-radius: 999px; padding: 1px 8px; }
+.tile .meta { padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 0; }
+.tile .name { font-family: var(--f-display); font-weight: 800; font-size: 16px; line-height: 1.2; }
+.tile .lvl { font-size: 12px; color: var(--muted); }
+
+/* bench */
+.bench { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 980px) { .bench { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+.game-head { display: flex; flex-direction: column; gap: 4px; }
+.game-head h2 { font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
+.game-head p { margin: 0; color: var(--muted); }
+.progress { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pips { display: flex; gap: 4px; }
+.pips span { width: 26px; height: 8px; border-radius: 4px; background: var(--line); }
+.pips span.on { background: var(--ok); }
+.progress b { font-variant-numeric: tabular-nums; }
+.progress .stat { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+
+.parts { display: flex; flex-direction: column; gap: 10px; }
+.locked { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; background: repeating-linear-gradient(-45deg, var(--code-bg) 0 8px, transparent 8px 16px), var(--code-bg); border: 1px dashed var(--line); color: var(--muted); font-size: 13.5px; }
+.locked svg { flex-shrink: 0; }
+.locked b { color: var(--ink); font-weight: 700; }
+.locked .ln { margin-left: auto; font-family: var(--f-mono); font-size: 11.5px; white-space: nowrap; }
+
+.tpart { border: 1.5px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: var(--panel); }
+.tpart:focus-within { border-color: var(--accent); }
+.tpart.done { border-color: color-mix(in srgb, var(--ok) 55%, transparent); background: var(--ok-soft); }
+.tp-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.tp-num { font-family: var(--f-mono); font-size: 12px; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; }
+.tpart.done .tp-num { color: var(--ok); }
+.tp-head h3 { font-size: 17px; font-weight: 800; flex: 1; min-width: 0; }
+.tp-state { font-family: var(--f-mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tpart.done .tp-state { color: var(--ok); font-weight: 600; }
+.tp-desc { margin: 0; color: var(--muted); font-size: 14px; }
+.typebox { position: relative; border-radius: 8px; cursor: text; }
+.tpart.done .typebox { cursor: default; }
+.typebox pre { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; font-family: var(--f-mono); font-size: 13.5px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ghost); min-height: 3em; }
+.typebox textarea { position: absolute; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; resize: none; font-size: 16px; }
+.typebox .ok { color: var(--ink); }
+.typebox .err { color: var(--bad); background: var(--bad-soft); border-radius: 2px; }
+.typebox .cur { color: var(--ink); background: color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 2px; }
+.typebox:focus-within .cur { animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { background: transparent; } }
+.typebox .hint-tap { position: absolute; right: 8px; bottom: 8px; font-size: 11.5px; color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; pointer-events: none; }
+.typebox:focus-within .hint-tap { display: none; }
+.t-k { color: var(--t-k); font-weight: 600; } .t-s { color: var(--t-s); } .t-n { color: var(--t-n); } .t-c { color: var(--t-c); font-style: italic; }
+.ed-note { margin: 0; font-size: 13px; color: var(--muted); }
+.ed-note kbd { font-family: var(--f-mono); font-size: 11.5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: var(--code-bg); }
+
+/* simulator */
+.sim { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+@media (max-width: 980px) { .sim { position: static; } }
+.tabs { display: flex; gap: 4px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+.tabs button { flex: 1; border: 0; background: transparent; padding: 6px 10px; border-radius: 7px; font-weight: 700; font-size: 13px; color: var(--muted); }
+.tabs button[aria-selected="true"] { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / .12); }
+.screen-wrap { background: var(--screen); border-radius: 12px; padding: 10px; }
+.screen { position: relative; width: 100%; max-width: 100%; aspect-ratio: 1; border-radius: 6px; overflow: hidden; background: #000; }
+.screen iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+.idle, .splash { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; gap: 8px; padding: 20px; color: var(--screen-ink); font-family: var(--f-mono); font-size: 13px; }
+.idle { background: repeating-linear-gradient(0deg, rgb(255 255 255 / .03) 0 2px, transparent 2px 4px), var(--screen); }
+.idle strong, .splash strong { font-family: var(--f-display); font-size: 24px; color: #fff; line-height: 1.15; }
+.splash { background: rgb(5 8 16 / .82); pointer-events: none; animation: fadeout .5s ease 1.4s forwards; }
+.splash small { text-transform: uppercase; letter-spacing: .14em; font-size: 11px; color: #ff9a5c; }
+@keyframes fadeout { to { opacity: 0; visibility: hidden; } }
+.screen-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 2px 0; color: var(--screen-ink); font-family: var(--f-mono); font-size: 11.5px; flex-wrap: wrap; }
+.led { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.led::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #4a5263; flex-shrink: 0; }
+.led.on::before { background: #3ee07f; box-shadow: 0 0 8px #3ee07f; }
+.pad { display: flex; gap: 6px; flex-wrap: wrap; }
+.pad button { min-width: 38px; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid #2f384a; background: #1a2131; color: #dbe2ee; font-family: var(--f-mono); font-size: 13px; touch-action: none; user-select: none; -webkit-user-select: none; }
+.pad button:active { background: #2a3448; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { border-radius: 10px; padding: 9px 14px; font-weight: 700; font-size: 14px; border: 1.5px solid var(--line); background: var(--panel); }
+.btn:hover:not(:disabled) { border-color: var(--muted); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.06); }
+.btn.primary.ready { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 25%, transparent); } }
+.btn.warn { border-color: var(--bad); color: var(--bad); }
+.status { border-radius: 10px; padding: 10px 12px; font-size: 14px; background: var(--code-bg); border: 1px solid var(--line); }
+.status.ok { border-color: var(--ok); background: var(--ok-soft); }
+.status b { font-weight: 700; }
+
+.share { border: 1.5px solid var(--accent); background: var(--accent-soft); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.share h3 { font-size: 18px; font-weight: 800; }
+.share p { margin: 0; font-size: 13.5px; color: var(--muted); }
+.share .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.share .row input { flex: 1 1 180px; }
+.share .link { font-family: var(--f-mono); font-size: 12px; }
+
+.console { background: var(--screen); color: var(--screen-ink); border-radius: 10px; font-family: var(--f-mono); font-size: 12px; padding: 8px 10px; max-height: 130px; overflow: auto; display: flex; flex-direction: column; gap: 2px; }
+.console .c-head { color: #7c879b; text-transform: uppercase; letter-spacing: .08em; font-size: 10.5px; }
+.console .err { color: #ff8a92; }
+.console .info { color: #8fb4ff; }
+
+.listing { margin: 0; max-height: 560px; overflow: auto; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; font-family: var(--f-mono); font-size: 12.5px; line-height: 1.6; }
+.listing .lp { padding: 8px 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.listing .lp.mine { background: var(--ok-soft); box-shadow: inset 3px 0 0 var(--ok); }
+.listing .lp-h { display: block; font-family: var(--f-body); font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.listing .lp.mine .lp-h { color: var(--ok); }
+
+/* player mode */
+.player { max-width: 620px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.player .eyebrow { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--accent); }
+.player h1 { font-size: clamp(30px, 6vw, 46px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
+.player .by { color: var(--muted); margin: 0; }
+.player .by b { color: var(--ink); }
+.player .facts { display: flex; flex-wrap: wrap; gap: 8px; }
+.player .facts span { font-size: 13px; border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 3px 10px; font-variant-numeric: tabular-nums; }
+.player .controls-note { margin: 0; font-size: 14px; color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap" id="lab-view">
+  <header class="top">
+    <div class="brand">
+      <h1>Build-a-Game <span>Lab</span></h1>
+      <p>Pick a game. Most of the code is already written behind the scenes. You type the 5 most important parts yourself, then press Run and play the game you made.</p>
+    </div>
+    <div class="who">
+      <label for="student-name">Your name</label>
+      <input type="text" id="student-name" maxlength="30" placeholder="Type your name" autocomplete="off">
+    </div>
+  </header>
+
+  <nav class="shelf" id="shelf" aria-label="Choose a game"></nav>
+
+  <main class="bench">
+    <section class="panel" aria-labelledby="game-title">
+      <div class="game-head">
+        <h2 id="game-title"></h2>
+        <p id="game-blurb"></p>
+      </div>
+      <div class="progress">
+        <div class="pips" id="pips"></div>
+        <span><b id="prog-text"></b></span>
+        <span class="stat" id="prog-stat"></span>
+      </div>
+      <p class="ed-note">Click a part and type the faded code exactly. Indents are added for you after <kbd>Enter</kbd>. Mistakes turn red: press <kbd>Backspace</kbd> to fix them. Copy and paste is turned off, so you really write it.</p>
+      <div class="parts" id="parts"></div>
+    </section>
+
+    <section class="panel sim" aria-label="Simulator">
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tab-screen" aria-selected="true">Simulator</button>
+        <button role="tab" id="tab-code" aria-selected="false">Full code</button>
+      </div>
+      <div id="view-screen">
+        <div class="screen-wrap">
+          <div class="screen" id="screen">
+            <iframe id="frame" title="Game simulator" sandbox="allow-scripts"></iframe>
+            <div class="idle" id="idle"><strong id="idle-title">Simulator locked</strong><span id="idle-sub">Type all 5 parts to unlock Run</span></div>
+          </div>
+          <div class="screen-bar">
+            <span class="led" id="led">stopped</span>
+            <div class="pad" aria-label="On-screen controls">
+              <button data-key="ArrowLeft" aria-label="Left">&larr;</button>
+              <button data-key="ArrowUp" aria-label="Up">&uarr;</button>
+              <button data-key="ArrowDown" aria-label="Down">&darr;</button>
+              <button data-key="ArrowRight" aria-label="Right">&rarr;</button>
+              <button data-key=" " aria-label="Space">space</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="listing" id="view-code" hidden></div>
+      <div class="controls">
+        <button class="btn primary" id="run" disabled>&#9654; Run my game</button>
+        <button class="btn" id="stop">Stop</button>
+        <button class="btn" id="reset">Start this game over</button>
+      </div>
+      <div class="status" id="status" role="status"></div>
+      <div class="share" id="share" hidden>
+        <h3>Share your game</h3>
+        <p>Give your game a name. Anyone with the link can play it and see the code you wrote.</p>
+        <div class="row">
+          <input type="text" id="share-title" maxlength="40" aria-label="Game name">
+          <button class="btn primary" id="make-link">Create link</button>
+        </div>
+        <div class="row" id="link-row" hidden>
+          <input type="text" class="link" id="share-link" readonly aria-label="Share link">
+          <button class="btn" id="copy-link">Copy</button>
+        </div>
+      </div>
+      <div class="console" id="console" aria-label="Console output"><div class="c-head">Console</div></div>
+    </section>
+  </main>
+</div>
+
+<div class="wrap" id="player-view" hidden>
+  <div class="player">
+    <span class="eyebrow">Made in Build-a-Game Lab</span>
+    <h1 id="p-title"></h1>
+    <p class="by" id="p-by"></p>
+    <div class="facts" id="p-facts"></div>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="ptab-screen" aria-selected="true">Play</button>
+      <button role="tab" id="ptab-code" aria-selected="false">See the code</button>
+    </div>
+    <div id="p-screen-host"></div>
+    <div class="listing" id="p-code" hidden></div>
+    <p class="controls-note" id="p-controls"></p>
+    <div class="controls">
+      <button class="btn primary" id="p-restart">Restart</button>
+      <button class="btn" id="p-build">Build your own game</button>
+    </div>
+  </div>
+</div>
+
+<script src="games.js"></script>
+<script>
+/* Link to this page, used to build share links */
+const ARTIFACT_URL = location.origin + location.pathname;
+
+/* ---------- Runtime every game gets inside the simulator ---------- */
+const PRELUDE = `
+(function () {
+  function send(level, text, line) { parent.postMessage({ __sim: true, level: level, text: text, line: line }, '*'); }
+  var log = console.log;
+  console.log = function () { var a = [].slice.call(arguments); send('log', a.map(String).join(' ')); log.apply(console, a); };
+  window.onerror = function (msg, src, line) { send('error', String(msg), line); return true; };
+})();
+var canvas = document.getElementById('game');
+var ctx = canvas.getContext('2d');
+var W = canvas.width, H = canvas.height;
+var keys = {};
+addEventListener('keydown', function (e) {
+  if (e.repeat) { e.stopImmediatePropagation(); e.preventDefault(); return; }
+  keys[e.key] = true;
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].indexOf(e.key) > -1) e.preventDefault();
+}, true);
+addEventListener('keyup', function (e) { keys[e.key] = false; }, true);
+addEventListener('message', function (e) {
+  var d = e.data;
+  if (d && d.type === 'key') dispatchEvent(new KeyboardEvent(d.down ? 'keydown' : 'keyup', { key: d.key }));
+});
+function onTap(fn) {
+  canvas.addEventListener('pointerdown', function (e) {
+    var r = canvas.getBoundingClientRect();
+    fn((e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height);
+  });
+}
+function banner(title, sub) {
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 34px sans-serif'; ctx.fillText(title, W / 2, H / 2 - 6);
+  ctx.font = '18px sans-serif'; ctx.fillText(sub || '', W / 2, H / 2 + 26);
+  ctx.fillStyle = '#cfd7e6'; ctx.font = '14px sans-serif'; ctx.fillText('Press Restart to play again', W / 2, H / 2 + 58);
+  ctx.restore();
+}
+function gameOver(sub) { banner('Game over', sub); }
+canvas.focus();
+`;
+
+/* ---------- Saved progress (this browser only) ---------- */
+const STORE_KEY = 'build-a-game-lab-v2';
+let store = {};
+try { store = JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; } catch (e) { store = {}; }
+store.games = store.games || {};
+if (!GAMES.some(g => g.id === store.current)) store.current = GAMES[0].id;
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (e) {} }
+function gs(id) {
+  id = id || store.current;
+  const s = store.games[id] || (store.games[id] = {});
+  s.typed = s.typed || {}; s.keys = s.keys || 0; s.errs = s.errs || 0;
+  return s;
+}
+
+const $ = id => document.getElementById(id);
+const game = () => GAMES.find(g => g.id === store.current);
+const typedIdx = g => g.parts.map((p, i) => p.t ? i : -1).filter(i => i > -1);
+const isDone = (g, s, i) => (s.typed[i] || '') === g.parts[i].code;
+const allDone = (g, s) => typedIdx(g).every(i => isDone(g, s, i));
+const linesOf = g => typedIdx(g).reduce((n, i) => n + g.parts[i].code.split('\n').length, 0);
+const accuracy = s => s.keys ? Math.max(0, Math.round(100 * (s.keys - s.errs) / s.keys)) : 100;
+
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function hl(src) {
+  const re = /(\/\/.*$)|('(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*")|\b(const|let|var|function|return|if|else|for|while|do|new|true|false)\b|\b(\d+\.?\d*)\b/gm;
+  let out = '', last = 0;
+  src.replace(re, (m, c, s, k, n, off) => {
+    out += esc(src.slice(last, off));
+    out += '<span class="t-' + (c ? 'c' : s ? 's' : k ? 'k' : 'n') + '">' + esc(m) + '</span>';
+    last = off + m.length;
+    return m;
+  });
+  return out + esc(src.slice(last));
+}
+const LOCK_SVG = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
+
+/* ---------- Typing view ---------- */
+function typedHTML(target, typed) {
+  const segs = [];
+  const push = (cls, txt) => { const l = segs[segs.length - 1]; if (l && l[0] === cls) l[1] += txt; else segs.push([cls, txt]); };
+  for (let i = 0; i < typed.length; i++) {
+    const c = typed[i], t = target[i];
+    if (c === t) push('ok', c);
+    else if (t === undefined) push('err', c === '\n' ? '↵' : c === ' ' ? '·' : c);
+    else if (t === '\n') push('err', '↵\n');
+    else push('err', t === ' ' ? '·' : t);
+  }
+  let html = segs.map(([c, t]) => '<span class="' + c + '">' + esc(t) + '</span>').join('');
+  if (typed.length < target.length) {
+    const nx = target[typed.length];
+    html += '<span class="cur">' + (nx === '\n' ? '↵\n' : esc(nx)) + '</span>' + esc(target.slice(typed.length + 1));
+  }
+  return html;
+}
+
+function renderShelf() {
+  $('shelf').innerHTML = GAMES.map(g => {
+    const done = allDone(g, gs(g.id));
+    return `<button class="tile" data-game="${g.id}" aria-pressed="${g.id === store.current}" style="--g-bg:${g.bg};--g-fg:${g.fg}">
+      <span class="art"><i></i>${done ? '<span class="badge">Built</span>' : ''}</span>
+      <span class="meta"><span class="name">${esc(g.name)}</span><span class="lvl">${g.level}</span></span>
+    </button>`;
+  }).join('');
+}
+
+function renderParts() {
+  const g = game(), s = gs();
+  const idx = typedIdx(g);
+  $('parts').innerHTML = g.parts.map((p, i) => {
+    const lines = p.code.split('\n').length;
+    if (!p.t) return `<div class="locked">${LOCK_SVG}<span><b>${esc(p.title)}</b> &middot; written for you</span><span class="ln">${lines} lines hidden</span></div>`;
+    const k = idx.indexOf(i) + 1;
+    const done = isDone(g, s, i);
+    return `<section class="tpart ${done ? 'done' : ''}" data-idx="${i}">
+      <div class="tp-head"><span class="tp-num">Part ${k} of 5</span><h3>${esc(p.title)}</h3><span class="tp-state" data-state></span></div>
+      <p class="tp-desc">${esc(p.desc)}</p>
+      <div class="typebox">
+        <pre data-pre></pre>
+        ${done ? '' : `<textarea data-idx="${i}" aria-label="Type part ${k}: ${esc(p.title)}" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"></textarea><span class="hint-tap">Click here to type</span>`}
+      </div>
+    </section>`;
+  }).join('');
+  $('parts').querySelectorAll('.tpart').forEach(el => paintPart(+el.dataset.idx));
+  const ta = $('parts').querySelectorAll('textarea');
+  ta.forEach(t => { t.value = s.typed[t.dataset.idx] || ''; });
+}
+
+function paintPart(i) {
+  const g = game(), s = gs();
+  const el = $('parts').querySelector(`.tpart[data-idx="${i}"]`);
+  if (!el) return;
+  const target = g.parts[i].code, typed = s.typed[i] || '';
+  const done = typed === target;
+  el.querySelector('[data-pre]').innerHTML = done ? hl(target) : typedHTML(target, typed);
+  let correct = 0;
+  while (correct < typed.length && typed[correct] === target[correct]) correct++;
+  el.querySelector('[data-state]').textContent = done ? 'Done ✓' : Math.floor(100 * correct / target.length) + '%';
+}
+
+function renderProgress() {
+  const g = game(), s = gs();
+  const idx = typedIdx(g);
+  const n = idx.filter(i => isDone(g, s, i)).length;
+  $('pips').innerHTML = idx.map(i => `<span class="${isDone(g, s, i) ? 'on' : ''}"></span>`).join('');
+  $('prog-text').textContent = n === 5 ? 'All 5 parts typed' : n + ' of 5 parts typed';
+  $('prog-stat').textContent = s.keys ? accuracy(s) + '% accuracy · ' + s.keys + ' keys pressed' : '';
+  const ready = n === 5;
+  $('run').disabled = !ready;
+  $('run').classList.toggle('ready', ready && !s.runs);
+  if (!running) {
+    $('idle-title').textContent = ready ? 'Your game is ready' : 'Simulator locked';
+    $('idle-sub').textContent = ready ? 'Press Run my game' : 'Type ' + (5 - n) + ' more part' + (5 - n === 1 ? '' : 's') + ' to unlock Run';
+  }
+  $('share').hidden = !(ready && s.runs);
+}
+
+function renderListing(target, g, typedMap, finished) {
+  target.innerHTML = g.parts.map(p => {
+    const mine = !!p.t;
+    if (!mine && !finished) return `<div class="lp"><span class="lp-h">Written for you</span><span class="t-c">// ${p.code.split('\n').length} lines hidden until you finish typing</span></div>`;
+    const code = mine && typedMap ? typedMap(p) : p.code;
+    return `<div class="lp ${mine ? 'mine' : ''}"><span class="lp-h">${mine ? 'Written by you' : 'Written for you'} &middot; ${esc(p.title)}</span>${code ? hl(code) : '<span class="t-c">// not typed yet</span>'}</div>`;
+  }).join('');
+}
+
+function renderLab() {
+  const g = game(), s = gs();
+  $('game-title').textContent = g.name;
+  $('game-blurb').textContent = g.blurb + ' ' + g.controls;
+  renderShelf(); renderParts(); renderProgress();
+  renderListing($('view-code'), g, p => s.typed[g.parts.indexOf(p)] || '', allDone(g, s));
+  $('share-title').value = defaultTitle();
+  $('link-row').hidden = true;
+}
+
+function defaultTitle() {
+  const n = $('student-name').value.trim();
+  return n ? n + '’s ' + game().name : game().name;
+}
+function setStatus(html, ok) { $('status').className = 'status' + (ok ? ' ok' : ''); $('status').innerHTML = html; }
+
+/* ---------- Typing input ---------- */
+function onType(ta) {
+  const i = +ta.dataset.idx, g = game(), s = gs();
+  const target = g.parts[i].code;
+  let t = s.typed[i] || '';
+  const v = ta.value.replace(/\r/g, '').replace(/\t/g, '  ');
+  if (v.length > t.length && v.startsWith(t)) {
+    for (const ch of v.slice(t.length)) {
+      if (t.length >= target.length + 5) break;
+      s.keys++;
+      if (ch !== target[t.length]) s.errs++;
+      t += ch;
+      if (ch === '\n' && target[t.length - 1] === '\n') while (target[t.length] === ' ') t += ' ';
+    }
+  } else if (v.length < t.length && t.startsWith(v)) {
+    const wasIndent = /\n +$/.test(t);
+    t = v;
+    const m = /\n +$/.exec(t);
+    if (wasIndent && m) t = t.slice(0, m.index);
+  } else {
+    t = v.slice(0, target.length + 5);
+  }
+  if (!s.started) s.started = Date.now();
+  s.typed[i] = t;
+  ta.value = t;
+  ta.selectionStart = ta.selectionEnd = t.length;
+  save();
+  if (t === target) partFinished(i);
+  else { paintPart(i); renderProgressLight(); }
+}
+function renderProgressLight() {
+  const s = gs();
+  $('prog-stat').textContent = s.keys ? accuracy(s) + '% accuracy · ' + s.keys + ' keys pressed' : '';
+}
+
+function partFinished(i) {
+  const g = game(), s = gs();
+  const idx = typedIdx(g);
+  renderParts(); renderProgress();
+  renderListing($('view-code'), g, p => s.typed[g.parts.indexOf(p)] || '', allDone(g, s));
+  if (allDone(g, s)) {
+    if (!s.finished) s.finished = Date.now();
+    save(); renderShelf();
+    const secs = Math.max(1, Math.round((s.finished - s.started) / 1000));
+    setStatus(`<b>You wrote ${linesOf(g)} lines of code</b> in ${Math.floor(secs / 60)}m ${secs % 60}s with ${accuracy(s)}% accuracy. Your game is ready. Press <b>Run my game</b>.`, true);
+    $('run').focus();
+    return;
+  }
+  const next = idx.find(j => j > i && !isDone(g, s, j)) ?? idx.find(j => !isDone(g, s, j));
+  const left = idx.filter(j => !isDone(g, s, j)).length;
+  setStatus(`<b>Part done.</b> ${left} to go.`);
+  const ta = $('parts').querySelector(`textarea[data-idx="${next}"]`);
+  if (ta) { ta.focus({ preventScroll: true }); ta.closest('.tpart').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+}
+
+$('parts').addEventListener('input', e => { if (e.target.matches('textarea')) onType(e.target); });
+$('parts').addEventListener('paste', e => { if (e.target.matches('textarea')) { e.preventDefault(); setStatus('Copy and paste is turned off. Typing it yourself is how you learn it.'); } });
+$('parts').addEventListener('drop', e => { if (e.target.matches('textarea')) e.preventDefault(); });
+$('parts').addEventListener('keydown', e => {
+  const ta = e.target;
+  if (!ta.matches('textarea')) return;
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'].includes(e.key)) e.preventDefault();
+  if (e.key === 'Tab' && !e.shiftKey) {
+    const target = game().parts[+ta.dataset.idx].code, t = ta.value;
+    if (target[t.length] === ' ') {
+      e.preventDefault();
+      let add = '';
+      while (target[t.length + add.length] === ' ') add += ' ';
+      ta.value = t + add;
+      onType(ta);
+    }
+  }
+  if ((e.ctrlKey || e.metaKey) && ['a', 'z', 'y'].includes(e.key.toLowerCase())) e.preventDefault();
+});
+$('parts').addEventListener('click', e => {
+  const box = e.target.closest('.typebox');
+  if (!box) return;
+  const ta = box.querySelector('textarea');
+  if (ta) { ta.focus({ preventScroll: true }); ta.selectionStart = ta.selectionEnd = ta.value.length; }
+});
+
+/* ---------- Simulator ---------- */
+let running = false, activeFrame = null, lineMap = [], codeOffset = 0;
+
+function buildDoc(code) {
+  const before = '<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{width:100%;height:100%;display:block;outline:none;touch-action:none}</style></head><body><canvas id="game" width="400" height="400" tabindex="0"></canvas><script>' + PRELUDE + '<\/script>\n<script>\n';
+  codeOffset = (before.match(/\n/g) || []).length;
+  return before + code.replace(/<\/script/gi, '<\\/script') + '\n<\/script></body></html>';
+}
+function assemble(g, typedFor) {
+  let code = '', line = 1;
+  lineMap = [];
+  g.parts.forEach(p => {
+    const body = p.t ? typedFor(p) : p.code;
+    const chunk = '// ' + p.title + '\n' + body + '\n';
+    const n = chunk.split('\n').length - 1;
+    lineMap.push({ title: p.title, mine: !!p.t, from: line, to: line + n - 1 });
+    code += chunk; line += n;
+  });
+  return code;
+}
+function logLine(text, cls) {
+  const c = $('console');
+  const d = document.createElement('div');
+  if (cls) d.className = cls;
+  d.textContent = text;
+  c.appendChild(d);
+  while (c.children.length > 60) c.children[1].remove();
+  c.scrollTop = c.scrollHeight;
+}
+function clearConsole() { $('console').innerHTML = '<div class="c-head">Console</div>'; }
+
+function showSplash(screenEl, title, by) {
+  screenEl.querySelectorAll('.splash').forEach(x => x.remove());
+  const sp = document.createElement('div');
+  sp.className = 'splash';
+  sp.innerHTML = '<small></small><strong></strong><span></span>';
+  sp.children[0].textContent = 'Now playing';
+  sp.children[1].textContent = title;
+  sp.children[2].textContent = by;
+  screenEl.appendChild(sp);
+  setTimeout(() => sp.remove(), 2200);
+}
+
+function runLab() {
+  const g = game(), s = gs();
+  if (!allDone(g, s)) return;
+  clearConsole();
+  activeFrame = $('frame');
+  activeFrame.srcdoc = buildDoc(assemble(g, p => s.typed[g.parts.indexOf(p)] || ''));
+  running = true;
+  $('idle').hidden = true;
+  $('led').classList.add('on');
+  const name = $('student-name').value.trim();
+  $('led').textContent = g.name + (name ? ' · by ' + name : '');
+  showTab('screen');
+  showSplash($('screen'), defaultTitle(), name ? 'Coded by ' + name : 'Coded by you');
+  s.runs = (s.runs || 0) + 1; save();
+  renderProgress();
+  logLine('Running your ' + g.name + '. ' + g.controls, 'info');
+  if (s.runs === 1) setStatus(`<b>It works. You built ${esc(g.name)}!</b> Click the game screen if the keys do not respond. When you are ready, share it with the box below.`, true);
+  setTimeout(() => { try { activeFrame.focus(); } catch (e) {} }, 60);
+}
+function stopLab() {
+  $('frame').srcdoc = '<!doctype html><html><body style="margin:0;background:#000"></body></html>';
+  running = false;
+  $('idle').hidden = false;
+  $('led').classList.remove('on');
+  $('led').textContent = 'stopped';
+  renderProgress();
+}
+
+window.addEventListener('message', e => {
+  if (!activeFrame || e.source !== activeFrame.contentWindow || !e.data || !e.data.__sim) return;
+  const d = e.data;
+  if (d.level !== 'error') { logLine(d.text); return; }
+  let where = '';
+  if (d.line) {
+    const ln = d.line - codeOffset;
+    const part = lineMap.find(p => ln >= p.from && ln <= p.to);
+    if (part) where = ' (in "' + part.title + '")';
+  }
+  logLine('Error: ' + d.text + where, 'err');
+});
+
+/* keys: on-screen pad + forwarding from the page */
+function sendKey(key, down) { if (running && activeFrame && activeFrame.contentWindow) activeFrame.contentWindow.postMessage({ type: 'key', key, down }, '*'); }
+document.addEventListener('pointerdown', e => {
+  const b = e.target.closest('.pad button');
+  if (!b) return;
+  e.preventDefault();
+  const k = b.dataset.key;
+  sendKey(k, true);
+  const up = () => { sendKey(k, false); b.removeEventListener('pointerup', up); b.removeEventListener('pointerleave', up); b.removeEventListener('pointercancel', up); };
+  b.addEventListener('pointerup', up); b.addEventListener('pointerleave', up); b.addEventListener('pointercancel', up);
+});
+const GAME_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '];
+['keydown', 'keyup'].forEach(t => document.addEventListener(t, e => {
+  if (!running || !GAME_KEYS.includes(e.key)) return;
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || (tag === 'button' && e.key === ' ')) return;
+  e.preventDefault();
+  if (t === 'keydown' && e.repeat) return;
+  sendKey(e.key, t === 'keydown');
+}));
+
+function showTab(which) {
+  $('tab-screen').setAttribute('aria-selected', which === 'screen');
+  $('tab-code').setAttribute('aria-selected', which === 'code');
+  $('view-screen').hidden = which !== 'screen';
+  $('view-code').hidden = which !== 'code';
+}
+$('tab-screen').onclick = () => showTab('screen');
+$('tab-code').onclick = () => showTab('code');
+$('run').onclick = runLab;
+$('stop').onclick = stopLab;
+
+let resetTimer = null;
+$('reset').onclick = e => {
+  const b = e.currentTarget;
+  if (!b.dataset.armed) {
+    b.dataset.armed = '1'; b.textContent = 'Click again to erase your typing'; b.classList.add('warn');
+    resetTimer = setTimeout(() => { delete b.dataset.armed; b.textContent = 'Start this game over'; b.classList.remove('warn'); }, 3000);
+    return;
+  }
+  clearTimeout(resetTimer); delete b.dataset.armed; b.textContent = 'Start this game over'; b.classList.remove('warn');
+  store.games[store.current] = {}; save();
+  stopLab(); clearConsole(); renderLab();
+  setStatus('Fresh start. Click Part 1 and begin typing.');
+};
+
+/* ---------- Sharing ---------- */
+function b64url(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  bytes.forEach(b => { bin += String.fromCharCode(b); });
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function unb64url(s) {
+  s = s.replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  const bin = atob(s);
+  return new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
+}
+$('make-link').onclick = () => {
+  const name = $('student-name').value.trim();
+  if (!name) { setStatus('Type your name at the top of the page first, so people know who made the game.'); $('student-name').focus(); return; }
+  const g = game(), s = gs();
+  const title = $('share-title').value.trim() || defaultTitle();
+  const secs = s.finished && s.started ? Math.round((s.finished - s.started) / 1000) : 0;
+  const payload = { n: name.slice(0, 30), t: title.slice(0, 40), a: accuracy(s), s: secs, d: new Date().toISOString().slice(0, 10) };
+  $('share-link').value = ARTIFACT_URL + '#play-' + g.id + '-' + b64url(JSON.stringify(payload));
+  $('link-row').hidden = false;
+  $('share-link').select();
+};
+$('copy-link').onclick = () => {
+  const inp = $('share-link');
+  const done = () => { $('copy-link').textContent = 'Copied'; setTimeout(() => { $('copy-link').textContent = 'Copy'; }, 1600); };
+  try {
+    navigator.clipboard.writeText(inp.value).then(done, () => { inp.select(); setStatus('Press Ctrl+C (or Cmd+C) to copy the selected link.'); });
+  } catch (e) { inp.select(); setStatus('Press Ctrl+C (or Cmd+C) to copy the selected link.'); }
+};
+
+/* ---------- Player mode (opened from a share link) ---------- */
+let playerGame = null;
+function parseShare() {
+  const h = (location.hash || '').slice(1);
+  if (!h.startsWith('play-')) return null;
+  const rest = h.slice(5), dash = rest.indexOf('-');
+  if (dash < 0) return null;
+  const g = GAMES.find(x => x.id === rest.slice(0, dash));
+  if (!g) return null;
+  let p = {};
+  try { p = JSON.parse(unb64url(rest.slice(dash + 1))) || {}; } catch (e) { p = {}; }
+  return { g, name: String(p.n || 'A student').slice(0, 30), title: String(p.t || g.name).slice(0, 40), acc: +p.a || 0, secs: +p.s || 0, date: String(p.d || '').slice(0, 10) };
+}
+function buildPlayerScreen() {
+  const host = $('p-screen-host');
+  host.innerHTML = `<div class="screen-wrap"><div class="screen" id="p-screen"><iframe title="Game" sandbox="allow-scripts"></iframe></div>
+    <div class="screen-bar"><span class="led on" id="p-led"></span><div class="pad" aria-label="On-screen controls">
+    <button data-key="ArrowLeft" aria-label="Left">&larr;</button><button data-key="ArrowUp" aria-label="Up">&uarr;</button>
+    <button data-key="ArrowDown" aria-label="Down">&darr;</button><button data-key="ArrowRight" aria-label="Right">&rarr;</button>
+    <button data-key=" " aria-label="Space">space</button></div></div></div>`;
+}
+function playShared(info) {
+  activeFrame = $('p-screen').querySelector('iframe');
+  activeFrame.srcdoc = buildDoc(assemble(info.g, p => p.code));
+  running = true;
+  showSplash($('p-screen'), info.title, 'Coded by ' + info.name);
+  setTimeout(() => { try { activeFrame.focus(); } catch (e) {} }, 60);
+}
+function route() {
+  const info = parseShare();
+  if (info) {
+    playerGame = info;
+    stopLab();
+    $('lab-view').hidden = true; $('player-view').hidden = false;
+    document.title = info.title + ' · Build-a-Game Lab';
+    $('p-title').textContent = info.title;
+    $('p-by').innerHTML = 'Coded by <b></b>' + (info.date ? ' on ' + esc(info.date) : '');
+    $('p-by').querySelector('b').textContent = info.name;
+    const facts = [info.g.name, linesOf(info.g) + ' lines typed by hand'];
+    if (info.acc) facts.push(info.acc + '% typing accuracy');
+    if (info.secs) facts.push('built in ' + Math.floor(info.secs / 60) + 'm ' + (info.secs % 60) + 's');
+    $('p-facts').innerHTML = facts.map(f => '<span>' + esc(f) + '</span>').join('');
+    $('p-controls').textContent = info.g.controls;
+    buildPlayerScreen();
+    $('p-led').textContent = info.g.name + ' · by ' + info.name;
+    renderListing($('p-code'), info.g, null, true);
+    showPTab('screen');
+    playShared(info);
+  } else {
+    playerGame = null;
+    if (!$('player-view').hidden) { $('p-screen-host').innerHTML = ''; running = false; activeFrame = null; }
+    $('player-view').hidden = true; $('lab-view').hidden = false;
+    document.title = 'Build-a-Game Lab';
+  }
+}
+function showPTab(which) {
+  $('ptab-screen').setAttribute('aria-selected', which === 'screen');
+  $('ptab-code').setAttribute('aria-selected', which === 'code');
+  $('p-screen-host').hidden = which !== 'screen';
+  $('p-code').hidden = which !== 'code';
+}
+$('ptab-screen').onclick = () => showPTab('screen');
+$('ptab-code').onclick = () => showPTab('code');
+$('p-restart').onclick = () => { if (playerGame) { showPTab('screen'); playShared(playerGame); } };
+$('p-build').onclick = () => {
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  try { if (location.hash) location.hash = ''; } catch (e) {}
+  $('p-screen-host').innerHTML = ''; running = false; activeFrame = null; playerGame = null;
+  $('player-view').hidden = true; $('lab-view').hidden = false;
+  document.title = 'Build-a-Game Lab';
+  window.scrollTo(0, 0);
+};
+window.addEventListener('hashchange', route);
+
+/* ---------- Game switching and name ---------- */
+$('shelf').addEventListener('click', e => {
+  const t = e.target.closest('[data-game]');
+  if (!t || t.dataset.game === store.current) return;
+  stopLab(); clearConsole();
+  store.current = t.dataset.game; save();
+  renderLab();
+  const s = gs();
+  setStatus(allDone(game(), s) ? 'You already built this one. Press Run my game to play it.' : 'Click Part 1 and start typing.');
+  logLine('Simulator ready. Errors from your game will show up here.', 'info');
+});
+$('student-name').value = store.name || '';
+$('student-name').addEventListener('input', () => {
+  store.name = $('student-name').value.trim(); save();
+  $('share-title').value = defaultTitle();
+});
+
+renderLab();
+setStatus(allDone(game(), gs()) ? 'You already built this one. Press Run my game to play it.' : 'Pick a game above, then click Part 1 and start typing.');
+logLine('Simulator ready. Errors from your game will show up here.', 'info');
+route();
+</script>
+</body>
+</html>
