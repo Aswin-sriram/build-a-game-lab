@@ -49,9 +49,39 @@ input[type="text"] { font: inherit; color: var(--ink); background: var(--panel);
 .brand h1 { font-size: clamp(26px, 4vw, 38px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
 .brand h1 span { color: var(--accent); }
 .brand p { margin: 6px 0 0; color: var(--muted); max-width: 62ch; }
-.who { display: flex; flex-direction: column; gap: 4px; }
-.who label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
-.who input { width: 220px; max-width: 100%; }
+.work { display: flex; flex-direction: column; gap: 20px; }
+
+/* team bar (top right while coding) */
+.teambar { display: flex; align-items: center; gap: 12px 16px; flex-wrap: wrap; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
+.tb-names { display: flex; flex-direction: column; min-width: 0; }
+.tb-label { font-size: 11.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.tb-names b { font-family: var(--f-display); font-size: 19px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
+.tb-saved { font-size: 12.5px; color: var(--ok); font-weight: 700; }
+.tb-saved.unsaved { color: var(--accent); }
+.tb-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* "who's coding" screen */
+.team-screen { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 820px) { .team-screen { grid-template-columns: minmax(0, 1fr); } }
+.team-card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.team-card h2 { font-size: clamp(24px, 3.4vw, 32px); font-weight: 800; letter-spacing: -0.01em; }
+.team-card h3 { font-size: 19px; font-weight: 800; }
+.team-card > p { margin: 0; color: var(--muted); max-width: 52ch; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.field input { font-size: 18px; padding: 10px 14px; }
+.team-error { margin: 0; color: var(--bad); font-weight: 700; }
+.btn.big { font-size: 17px; padding: 12px 18px; align-self: flex-start; }
+.saved-list { display: flex; flex-direction: column; gap: 8px; }
+.saved-list .empty { color: var(--muted); font-size: 14px; margin: 0; }
+.saved-team { display: flex; align-items: center; gap: 10px; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.saved-team:hover { border-color: var(--muted); }
+.saved-team .st-main { flex: 1; min-width: 0; text-align: left; background: none; border: 0; padding: 0; display: flex; flex-direction: column; }
+.saved-team .st-main b { font-family: var(--f-display); font-size: 17px; font-weight: 800; overflow-wrap: anywhere; }
+.saved-team .st-main span { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.saved-team .st-go { font-weight: 700; color: var(--accent); white-space: nowrap; background: none; border: 0; padding: 4px 6px; }
+.saved-team .st-del { font-size: 12px; color: var(--muted); background: none; border: 0; padding: 4px 6px; white-space: nowrap; }
+.saved-team .st-del.warn { color: var(--bad); font-weight: 700; }
 
 /* shelf */
 .shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
@@ -190,12 +220,37 @@ input[type="text"] { font: inherit; color: var(--ink); background: var(--panel);
       <h1>Build-a-Game <span>Lab</span></h1>
       <p>Pick a game. Most of the code is already written behind the scenes. You type the 5 most important parts yourself, then press Run and play the game you made.</p>
     </div>
-    <div class="who">
-      <label for="student-name">Your name</label>
-      <input type="text" id="student-name" maxlength="30" placeholder="Type your name" autocomplete="off">
+    <div class="teambar" id="teambar" hidden>
+      <div class="tb-names"><span class="tb-label">Coding now</span><b id="team-names"></b><span class="tb-saved" id="save-note"></span></div>
+      <div class="tb-actions">
+        <button class="btn primary" id="save-btn">Save progress</button>
+        <button class="btn" id="switch-btn">Switch team</button>
+      </div>
     </div>
   </header>
 
+  <section class="team-screen" id="team-view" hidden>
+    <form class="team-card" id="team-form" autocomplete="off">
+      <h2>Who&rsquo;s coding today?</h2>
+      <p>Two students share this computer. Type both your names, then press Start. Already started before? Type the same names, or pick your team from the list.</p>
+      <div class="field">
+        <label for="name1">Student 1</label>
+        <input type="text" id="name1" maxlength="24" placeholder="First name">
+      </div>
+      <div class="field">
+        <label for="name2">Student 2</label>
+        <input type="text" id="name2" maxlength="24" placeholder="First name">
+      </div>
+      <p class="team-error" id="team-error" hidden></p>
+      <button class="btn primary big" type="submit">Start coding</button>
+    </form>
+    <div class="team-card">
+      <h3>Saved teams on this computer</h3>
+      <div class="saved-list" id="saved-teams"></div>
+    </div>
+  </section>
+
+  <div class="work" id="work" hidden>
   <nav class="shelf" id="shelf" aria-label="Choose a game"></nav>
 
   <main class="bench">
@@ -247,7 +302,7 @@ input[type="text"] { font: inherit; color: var(--ink); background: var(--panel);
         <h3>Share your game</h3>
         <p>Give your game a name. Anyone with the link can play it and see the code you wrote.</p>
         <div class="row">
-          <input type="text" id="share-title" maxlength="40" aria-label="Game name">
+          <input type="text" id="share-title" maxlength="70" aria-label="Game name">
           <button class="btn primary" id="make-link">Create link</button>
         </div>
         <div class="row" id="link-row" hidden>
@@ -258,6 +313,7 @@ input[type="text"] { font: inherit; color: var(--ink); background: var(--panel);
       <div class="console" id="console" aria-label="Console output"><div class="c-head">Console</div></div>
     </section>
   </main>
+  </div>
 </div>
 
 <div class="wrap" id="player-view" hidden>
@@ -327,12 +383,35 @@ canvas.focus();
 `;
 
 /* ---------- Saved progress (this browser only) ---------- */
-const STORE_KEY = 'build-a-game-lab-v3';
-let store = {};
-try { store = JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; } catch (e) { store = {}; }
-store.games = store.games || {};
-if (!GAMES.some(g => g.id === store.current)) store.current = GAMES[0].id;
-function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (e) {} }
+/* Teams: two students share one computer. Each team's progress is kept separately in this browser,
+   and is written only when they press Save progress. `store` is the team being worked on right now. */
+const TEAMS_KEY = 'build-a-game-lab-teams-v1';
+let teamsDb = { teams: {} };
+try { teamsDb = JSON.parse(localStorage.getItem(TEAMS_KEY) || 'null') || { teams: {} }; } catch (e) { teamsDb = { teams: {} }; }
+teamsDb.teams = teamsDb.teams || {};
+let store = { games: {}, current: GAMES[0].id, names: [] };
+let teamId = null, dirty = false;
+const teamKey = names => names.map(n => n.trim().toLowerCase().replace(/\s+/g, ' ')).filter(Boolean).sort().join(' + ');
+const teamName = (names = store.names) => names.filter(Boolean).join(' & ');
+// Called whenever the team changes something: it is not saved until they press Save progress
+function save() { if (!teamId) return; dirty = true; renderSaveNote(); }
+function saveTeam() {
+  if (!teamId) return false;
+  store.savedAt = Date.now();
+  teamsDb.teams[teamId] = JSON.parse(JSON.stringify(store));
+  try { localStorage.setItem(TEAMS_KEY, JSON.stringify(teamsDb)); }
+  catch (e) { renderSaveNote('This computer would not let the page save. Ask your teacher.'); return false; }
+  dirty = false; renderSaveNote();
+  return true;
+}
+function renderSaveNote(errorText) {
+  const note = $('save-note');
+  if (!note) return;
+  const t = store.savedAt ? new Date(store.savedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+  note.textContent = errorText || (dirty ? 'Not saved yet' : t ? 'Saved at ' + t : '');
+  note.classList.toggle('unsaved', !!errorText || dirty);
+  $('save-btn').classList.toggle('ready', dirty);
+}
 function gs(id) {
   id = id || store.current;
   const s = store.games[id] || (store.games[id] = {});
@@ -474,7 +553,7 @@ function renderLab() {
 }
 
 function defaultTitle() {
-  const n = $('student-name').value.trim();
+  const n = teamName();
   return n ? n + '’s ' + game().name : game().name;
 }
 function setStatus(html, ok) { $('status').className = 'status' + (ok ? ' ok' : ''); $('status').innerHTML = html; }
@@ -554,7 +633,7 @@ function partFinished(i) {
     if (!s.finished) s.finished = Date.now();
     save(); renderShelf();
     const secs = Math.max(1, Math.round((s.finished - s.started) / 1000));
-    setStatus(`<b>You typed ${lettersOf(g)} letters of real code</b> in ${Math.floor(secs / 60)}m ${secs % 60}s with ${accuracy(s)}% accuracy. Your game is ready. Press <b>Run my game</b>.`, true);
+    setStatus(`<b>You typed ${lettersOf(g)} letters of real code</b> in ${Math.floor(secs / 60)}m ${secs % 60}s with ${accuracy(s)}% accuracy. Your game is ready. Press <b>Run my game</b>, and don’t forget <b>Save progress</b>.`, true);
     $('run').focus();
     return;
   }
@@ -658,7 +737,7 @@ function runLab() {
   running = true;
   $('idle').hidden = true;
   $('led').classList.add('on');
-  const name = $('student-name').value.trim();
+  const name = teamName();
   $('led').textContent = g.name + (name ? ' · by ' + name : '');
   showTab('screen');
   showSplash($('screen'), defaultTitle(), name ? 'Coded by ' + name : 'Coded by you');
@@ -750,12 +829,11 @@ function unb64url(s) {
   return new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
 }
 $('make-link').onclick = () => {
-  const name = $('student-name').value.trim();
-  if (!name) { setStatus('Type your name at the top of the page first, so people know who made the game.'); $('student-name').focus(); return; }
+  const name = teamName() || 'A student';
   const g = game(), s = gs();
   const title = $('share-title').value.trim() || defaultTitle();
   const secs = s.finished && s.started ? Math.round((s.finished - s.started) / 1000) : 0;
-  const payload = { n: name.slice(0, 30), t: title.slice(0, 40), a: accuracy(s), s: secs, d: new Date().toISOString().slice(0, 10) };
+  const payload = { n: name.slice(0, 60), t: title.slice(0, 70), a: accuracy(s), s: secs, d: new Date().toISOString().slice(0, 10) };
   $('share-link').value = ARTIFACT_URL + '#play-' + g.id + '-' + b64url(JSON.stringify(payload));
   $('link-row').hidden = false;
   $('share-link').select();
@@ -779,7 +857,7 @@ function parseShare() {
   if (!g) return null;
   let p = {};
   try { p = JSON.parse(unb64url(rest.slice(dash + 1))) || {}; } catch (e) { p = {}; }
-  return { g, name: String(p.n || 'A student').slice(0, 30), title: String(p.t || g.name).slice(0, 40), acc: +p.a || 0, secs: +p.s || 0, date: String(p.d || '').slice(0, 10) };
+  return { g, name: String(p.n || 'A student').slice(0, 60), title: String(p.t || g.name).slice(0, 70), acc: +p.a || 0, secs: +p.s || 0, date: String(p.d || '').slice(0, 10) };
 }
 function buildPlayerScreen() {
   const host = $('p-screen-host');
@@ -853,15 +931,90 @@ $('shelf').addEventListener('click', e => {
   setStatus(allDone(game(), s) ? 'You already built this one. Press Run my game to play it.' : 'Click Part 1 and start typing.');
   logLine('Simulator ready. Errors from your game will show up here.', 'info');
 });
-$('student-name').value = store.name || '';
-$('student-name').addEventListener('input', () => {
-  store.name = $('student-name').value.trim(); save();
-  $('share-title').value = defaultTitle();
+/* ---------- Teams: who's coding, saving, switching ---------- */
+function builtCount(t) { return GAMES.filter(g => t.games && t.games[g.id] && typedIdx(g).every(i => ((t.games[g.id].typed || {})[i] || '') === g.parts[i].letters)).length; }
+function renderSavedTeams() {
+  const list = Object.entries(teamsDb.teams).sort((a, b) => (b[1].savedAt || 0) - (a[1].savedAt || 0));
+  const host = $('saved-teams');
+  if (!list.length) { host.innerHTML = '<p class="empty">No saved teams yet. Type your names to start the first one.</p>'; return; }
+  host.innerHTML = list.map(([id, t]) => {
+    const when = t.savedAt ? new Date(t.savedAt).toLocaleString([], { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '';
+    const built = builtCount(t);
+    return `<div class="saved-team" data-team="${esc(id)}">
+      <button class="st-main" data-open><b></b><span>${built} game${built === 1 ? '' : 's'} built${when ? ' &middot; saved ' + esc(when) : ''}</span></button>
+      <button class="st-go" data-open>Continue &rarr;</button>
+      <button class="st-del" data-del>Remove</button>
+    </div>`;
+  }).join('');
+  host.querySelectorAll('.saved-team').forEach((row, k) => { row.querySelector('b').textContent = teamName(list[k][1].names || []); });
+}
+function showTeamScreen() {
+  stopLab(); clearConsole();
+  teamId = null; dirty = false;
+  $('work').hidden = true; $('teambar').hidden = true; $('team-view').hidden = false;
+  $('name1').value = ''; $('name2').value = ''; $('team-error').hidden = true;
+  renderSavedTeams();
+}
+function enterTeam(id, names) {
+  const saved = teamsDb.teams[id];
+  store = saved ? JSON.parse(JSON.stringify(saved)) : { games: {}, current: GAMES[0].id, names };
+  if (!saved) store.names = names;
+  store.games = store.games || {};
+  if (!GAMES.some(g => g.id === store.current)) store.current = GAMES[0].id;
+  teamId = id; dirty = false;
+  if (!saved) saveTeam();
+  $('team-view').hidden = true; $('work').hidden = false; $('teambar').hidden = false;
+  $('team-names').textContent = teamName();
+  renderSaveNote();
+  clearConsole(); renderLab(); window.scrollTo(0, 0);
+  const s = gs();
+  setStatus(saved
+    ? `<b>Welcome back, ${esc(teamName())}!</b> Your saved work is loaded. ${allDone(game(), s) ? 'Press Run my game, or pick a new game.' : 'Carry on typing where you stopped.'}`
+    : `<b>Hi ${esc(teamName())}!</b> Pick a game above, then click Part 1 and start typing. Press <b>Save progress</b> before you stop.`, !!saved);
+  logLine('Simulator ready. Errors from your game will show up here.', 'info');
+}
+$('team-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const names = [$('name1').value.trim(), $('name2').value.trim()].filter(Boolean);
+  if (!names.length) { $('team-error').textContent = 'Type at least one name to start.'; $('team-error').hidden = false; $('name1').focus(); return; }
+  enterTeam(teamKey(names), names);
 });
+$('saved-teams').addEventListener('click', e => {
+  const row = e.target.closest('.saved-team');
+  if (!row) return;
+  const id = row.dataset.team;
+  if (e.target.closest('[data-open]')) { enterTeam(id, teamsDb.teams[id].names || []); return; }
+  const del = e.target.closest('[data-del]');
+  if (del) {
+    if (!del.classList.contains('warn')) {
+      del.classList.add('warn'); del.textContent = 'Click again to delete';
+      setTimeout(() => { if (del.isConnected) { del.classList.remove('warn'); del.textContent = 'Remove'; } }, 3000);
+      return;
+    }
+    delete teamsDb.teams[id];
+    try { localStorage.setItem(TEAMS_KEY, JSON.stringify(teamsDb)); } catch (err) {}
+    renderSavedTeams();
+  }
+});
+$('save-btn').addEventListener('click', () => {
+  if (saveTeam()) setStatus(`<b>Saved!</b> ${esc(teamName())}, your work is safe on this computer. Next time, pick your team on the start screen to carry on.`, true);
+});
+let switchTimer = null;
+$('switch-btn').addEventListener('click', () => {
+  const b = $('switch-btn');
+  if (dirty && !b.classList.contains('warn')) {
+    b.classList.add('warn'); b.textContent = 'Leave without saving?';
+    setStatus('<b>Your latest work is not saved.</b> Press <b>Save progress</b> first, or click <b>Leave without saving?</b> to switch anyway.');
+    clearTimeout(switchTimer);
+    switchTimer = setTimeout(() => { b.classList.remove('warn'); b.textContent = 'Switch team'; }, 4000);
+    return;
+  }
+  clearTimeout(switchTimer); b.classList.remove('warn'); b.textContent = 'Switch team';
+  showTeamScreen();
+});
+window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 
-renderLab();
-setStatus(allDone(game(), gs()) ? 'You already built this one. Press Run my game to play it.' : 'Pick a game above, then click Part 1 and start typing.');
-logLine('Simulator ready. Errors from your game will show up here.', 'info');
+showTeamScreen();
 route();
 </script>
 </body>
